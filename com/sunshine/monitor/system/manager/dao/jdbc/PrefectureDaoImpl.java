@@ -14,32 +14,38 @@ import com.sunshine.monitor.system.manager.dao.PrefectureDao;
 public class PrefectureDaoImpl extends BaseDaoImpl implements PrefectureDao {
 	
 	public Map<String,Object> findPrefectureForMap(Map filter, Prefecture prefecture) {
+		List param = new ArrayList<>();
 		String sql= "";
 		if ((prefecture.getDwdm() != null)
 				&& (prefecture.getDwdm().length() > 0)) {
-			sql = sql + " and dwdm='" + prefecture.getDwdm() + "'";
+			sql = sql + " and dwdm=?";
+			param.add(prefecture.getDwdm());
 		}
 		if(prefecture.getDwdmmc() != null
 				&& (prefecture.getDwdmmc().length() > 0)) {
-			sql = sql + " and d.bmmc like '%"+prefecture.getDwdmmc()+"%'";
+			sql = sql + " and d.bmmc like ?";
+			param.add("%"+prefecture.getDwdmmc()+"%");
 		}
 		if ((prefecture.getXjjg() != null)
 				&& (prefecture.getXjjg().length() > 0)) {
-			sql = sql + " and xjjg='" + prefecture.getXjjg() + "'";
+			sql = sql + " and xjjg=?";
+			param.add(prefecture.getXjjg());
 		}
 		if ((prefecture.getJglx() != null)
 				&& (prefecture.getJglx().length() > 0)) {
-			sql = sql + " and jglx='" + prefecture.getJglx() + "'";
+			sql = sql + " and jglx=?";
+			param.add(prefecture.getJglx());
 		}
 		if ((prefecture.getJgqz() != null)
 				&& (prefecture.getJgqz().length() > 0)) {
-			sql = sql + " and jgqz='" + prefecture.getJgqz() + "'";
+			sql = sql + " and jgqz=?";
+			param.add(prefecture.getJgqz());
 		}
 		
 		sql = "select t.xjjg,d.bmmc xjjgmc,decode(t.jglx,'0','系统运算','用户配置') jglx,to_char(t.gxsj,'yyyy-mm-dd hh24:mi') gxsj" +
 				" from frm_prefecture t,frm_department d where t.xjjg=d.glbm " + sql
 				+ " order by dwdm,xjjg";
-		Map<String,Object> map = this.findPageForMap(sql, 
+		Map<String,Object> map = this.findPageForMap(sql,param.toArray(),
 				Integer.parseInt(filter.get("curPage").toString()), 
 				Integer.parseInt(filter.get("pageSize").toString())
 		);
@@ -64,23 +70,27 @@ public class PrefectureDaoImpl extends BaseDaoImpl implements PrefectureDao {
 						+ "%' ";
 			}
 		}*/
+		List param = new ArrayList<>();
 		String sql = "select distinct * from ( select xjjg as glbm,t.bmmc,jb,nvl(sjbm,0) sjbm,py from "+
 					 " frm_prefecture p ,frm_department t where p.xjjg = t.glbm ";		
 		if (!(filter.get("jb") == null || filter.get("jb").equals(""))) {
-            sql +=" where jb= " +(Integer.parseInt(filter.get("jb").toString())-1); 
+            sql +=" where jb= ?";
+            param.add((Integer.parseInt(filter.get("jb").toString())-1));
 		} else {
 			if (!(filter.get("glbm") == null || filter.get("glbm").equals(""))) {
-				sql += " and p.dwdm like '" + filter.get("glbm")+ "%' ";
+				sql += " and p.dwdm like ?";
+				param.add(filter.get("glbm")+"%");
 			}
 			if (!(filter.get("dep_name") == null || filter.get("dep_name")
 					.equals(""))) {
-				sql += " and t.dep_name like '%" + filter.get("dep_name")
-						+ "%' ";
+				sql += " and t.dep_name like ?";
+				param.add("%"+filter.get("dep_name")
+						+ "%");
 			}
 		}
 		sql += " ) order by nlssort(bmmc, 'NLS_SORT=SCHINESE_PINYIN_M') ";
 
-		l = this.jdbcTemplate.queryForList(sql);
+		l = this.jdbcTemplate.queryForList(sql,param.toArray());
 		return l;
 	}
 	
@@ -89,13 +99,19 @@ public class PrefectureDaoImpl extends BaseDaoImpl implements PrefectureDao {
 	 */
 	public List  getPrefectureTreeAsync(String sjbm,String glbmn){
 		List l = new ArrayList();
+		List param = new ArrayList<>();
 		StringBuffer sql = new StringBuffer(" select glbm, bmmc, jb, nvl(sjbm, 0) sjbm, py from frm_department where (1 = 1) ");
 		if("0".equals(sjbm)){
-			sql.append(" and jb in (1, 2) and glbm in(select xjjg from frm_prefecture where dwdm ='"+glbmn+"') order by nlssort(bmmc, 'NLS_SORT=SCHINESE_PINYIN_M') ");
+			sql.append(" and jb in (1, 2) and glbm in(select xjjg from frm_prefecture where dwdm " +
+					"=?) order by nlssort(bmmc, 'NLS_SORT=SCHINESE_PINYIN_M') ");
+			param.add(sjbm);
 		} else {
-			sql.append(" and sjbm like '"+sjbm+"%' and  glbm in (select xjjg from frm_prefecture where dwdm ='"+glbmn+"')  order by nlssort(bmmc, 'NLS_SORT=SCHINESE_PINYIN_M') ");
+			sql.append(" and sjbm like ? and  glbm in (select xjjg from frm_prefecture where dwdm" +
+					" =?)  order by nlssort(bmmc, 'NLS_SORT=SCHINESE_PINYIN_M') ");
+			param.add(sjbm+"%");
+			param.add(glbmn);
 		}
-		l = this.jdbcTemplate.queryForList(sql.toString());
+		l = this.jdbcTemplate.queryForList(sql.toString(),param.toArray());
 		return l;
 	}
 	/**
@@ -103,36 +119,37 @@ public class PrefectureDaoImpl extends BaseDaoImpl implements PrefectureDao {
 	 */
 	public List getDepartmentTreeAsync(String sjbm){
 		List l = new ArrayList();
+		List param = new ArrayList<>();
 		StringBuffer sql = new StringBuffer(" select glbm, bmmc, jb, nvl(sjbm, 0) sjbm, py from frm_department where (1=1) ");
 		if("0".equals(sjbm)){
 			sql.append("and jb in (1,2) order by nlssort(bmmc, 'NLS_SORT=SCHINESE_PINYIN_M') ");
 		} else {
-			sql.append("and sjbm like '"+sjbm+"%' order by nlssort(bmmc, 'NLS_SORT=SCHINESE_PINYIN_M') ");
+			sql.append("and sjbm like ? order by nlssort(bmmc, 'NLS_SORT=SCHINESE_PINYIN_M') ");
+			param.add(sjbm+"%");
 		}
-		l = this.jdbcTemplate.queryForList(sql.toString());
+		l = this.jdbcTemplate.queryForList(sql.toString(),param.toArray());
 		return l;
 	}
 	
-	/**
-	 * 获取下级单位个数
-	 * @param xjbm
-	 * @return int
-	 */
+
 	public int getCountForLowerDepartment(String sjbm){
-		String sql = "SELECT count(1)  from frm_department where sjbm = '"+sjbm+"'";
-		int r = this.jdbcTemplate.queryForInt(sql);
+		String sql = "SELECT count(1)  from frm_department where sjbm = ?";
+		int r = this.jdbcTemplate.queryForInt(sql,new Object[]{sjbm});
 		return r;
 	}
 	
 	public List getLeaderDepartmentTree(Map filter) {
 		List l = new ArrayList();
+		List param = new ArrayList<>();
 		String sql = "select glbm,bmmc,jb,nvl(sjbm,0) sjbm ,py " +
 				" from frm_department t ";
 		if (!(filter.get("jb") == null || filter.get("jb").equals(""))) {
-                sql +=" where jb= " +(Integer.parseInt(filter.get("jb").toString())-1); 
+                sql +=" where jb= ?";
+                param.add((Integer.parseInt(filter.get("jb").toString())-1));
 		} else {
 			if (!(filter.get("glbm") == null || filter.get("glbm").equals(""))) {
-				sql += "WHERE glbm IN (SELECT dwdm FROM frm_prefecture WHERE xjjg ='"+filter.get("glbm").toString()+"')";
+				sql += "WHERE glbm IN (SELECT dwdm FROM frm_prefecture WHERE xjjg =?)";
+				param.add(filter.get("glbm").toString());
 				/*sql += " start with t.glbm like '" + filter.get("glbm")
 						+ "%' connect by prior t.glbm=t.sjbm ";*/
 			}
@@ -144,31 +161,34 @@ public class PrefectureDaoImpl extends BaseDaoImpl implements PrefectureDao {
 		}
 		sql += " order by nlssort(bmmc, 'NLS_SORT=SCHINESE_PINYIN_M') ";
 
-		l = this.jdbcTemplate.queryForList(sql);
+		l = this.jdbcTemplate.queryForList(sql,param.toArray());
 		return l;
 	}
 	
 	public List getlocalDepartmentTree(Map filter) {
 		List l = new ArrayList();
+		List param = new ArrayList<>();
 		String sql = "select glbm,bmmc,jb,nvl(sjbm,0) sjbm ,py " +
 				" from frm_department t ";
 		if (!(filter.get("jb") == null || filter.get("jb").equals(""))) {
-                sql +=" where jb= " +(Integer.parseInt(filter.get("jb").toString())-1); 
+                sql +=" where jb= ?";
+                param.add((Integer.parseInt(filter.get("jb").toString())-1));
 		} else {
 			if (!(filter.get("glbm") == null || filter.get("glbm").equals(""))) {
-				sql += "WHERE glbm = '"+filter.get("glbm").toString()+"'";
-				sql += " start with t.glbm like '" + filter.get("glbm")
-						+ "%' connect by prior t.glbm=t.sjbm ";
+				sql += "WHERE glbm = ?";
+				sql += " start with t.glbm like ? connect by prior t.glbm=t.sjbm ";
+				param.add(filter.get("glbm").toString());
+				param.add(filter.get("glbm")+"%");
 			}
 			if (!(filter.get("dep_name") == null || filter.get("dep_name")
 					.equals(""))) {
-				sql += " and t.dep_name like '%" + filter.get("dep_name")
-						+ "%' ";
+				sql += " and t.dep_name like ? ";
+				param.add("%"+filter.get("dep_name")+"%");
 			}
 		}
 		sql += " order by t.jb,glbm";
 
-		l = this.jdbcTemplate.queryForList(sql);
+		l = this.jdbcTemplate.queryForList(sql,param.toArray());
 		return l;
 	}
 	
@@ -181,10 +201,10 @@ public class PrefectureDaoImpl extends BaseDaoImpl implements PrefectureDao {
 		+ " left join frm_xzqh d on substr(c.kdbh, 1, 6) = d.xzqhdm  union all "
 		+ " select e.xzqhmc as idname, e.xzqhdm as id, f.dwdm as pid, '3' as jb from frm_xzqh e right join code_url f on substr(e.xzqhdm, 1, 4) = substr(f.dwdm, 1, 4) and f.jdmc <> '本机' "
 		+ " union all select jdmc as idname, dwdm as id, '' as pid, '2' as jb from code_url where jdmc <> '本机') t ";	
-		 sql += " start with t.id like '"+dwdm+"%' connect by prior t.id = t.pid ";
+		 sql += " start with t.id like ? connect by prior t.id = t.pid ";
 		sql +=" order by id";
 		System.out.println(sql);
-		list = this.jdbcTemplate.queryForList(sql);
+		list = this.jdbcTemplate.queryForList(sql,new Object[]{dwdm+"%"});
 		return list;
 	}
 	
@@ -198,10 +218,11 @@ public class PrefectureDaoImpl extends BaseDaoImpl implements PrefectureDao {
 			+" select e.xzqhmc as idname, e.xzqhdm as id, f.dwdm as pid from frm_xzqh e right join code_url f on substr(e.xzqhdm, 1, 4) = substr(f.dwdm, 1, 4) and f.jdmc <> '本机' "
 			+" union all "
 			+" select jdmc as idname, dwdm as id, '' as pid from code_url where jdmc <> '本机' "
-			+" ) t start with t.id like '"+dwdm+"%' connect by prior t.id = t.pid order by nlssort(idname, 'NLS_SORT=SCHINESE_PINYIN_M') "
+			+" ) t start with t.id like ? connect by prior t.id = t.pid order by nlssort(idname, " +
+				"'NLS_SORT=SCHINESE_PINYIN_M') "
 			;
 		System.out.println(sql);
-		list = this.jdbcTemplate.queryForList(sql);
+		list = this.jdbcTemplate.queryForList(sql,new Object[]{dwdm+"%"});
 		return list;
 	}
 	
@@ -213,9 +234,9 @@ public class PrefectureDaoImpl extends BaseDaoImpl implements PrefectureDao {
 			+" select e.xzqhmc as idname, e.xzqhdm as id, f.dwdm as pid from frm_xzqh e right join code_url f on substr(e.xzqhdm, 1, 4) = substr(f.dwdm, 1, 4) and f.jdmc <> '本机' "
 			+" union all "
 			+" select jdmc as idname, dwdm as id, '' as pid from code_url where jdmc <> '本机' "
-			+" ) t start with t.id like '"+dwdm+"%' connect by prior t.id = t.pid order by id "
+			+" ) t start with t.id like ? connect by prior t.id = t.pid order by id "
 			;
-		list = this.jdbcTemplate.queryForList(sql);
+		list = this.jdbcTemplate.queryForList(sql,new Object[]{dwdm+"%"});
 		return list;
 	}
 	
@@ -239,16 +260,18 @@ public class PrefectureDaoImpl extends BaseDaoImpl implements PrefectureDao {
 	
 	public List getMulGateTree(Map filter) {
 		List list = new ArrayList();
+		List param = new ArrayList<>();
 		String sql = "select distinct id, idname, nvl(pid,0) pid from ( select kdmc as idname, "
 		+ " kdbh as id, nvl(d.xzqhdm, substr(c.kdbh, 1, 4)) as pid,'4' as jb from code_gate c "
 		+ " left join frm_xzqh d on substr(c.kdbh, 1, 6) = d.xzqhdm  union all "
 		+ " select e.xzqhmc as idname, e.xzqhdm as id, f.dwdm as pid, '3' as jb from frm_xzqh e right join code_url f on substr(e.xzqhdm, 1, 4) = substr(f.dwdm, 1, 4) "
 		+ " union all select jdmc as idname, dwdm as id, '' as pid, '2' as jb from code_url) t ";
 		if(filter.get("dwdm")!=null && !"".equals(filter.get("dwdm"))) {
-			sql += " start with t.id like '"+filter.get("dwdm")+"%' connect by prior t.id = t.pid ";
+			sql += " start with t.id like ? connect by prior t.id = t.pid ";
+			param.add(filter.get("dwdm")+"%");
 		}
 		sql +=" order by id";
-		list = this.jdbcTemplate.queryForList(sql);
+		list = this.jdbcTemplate.queryForList(sql,param.toArray());
 		return list;
 	}
 	public List getSTGateTree() {
@@ -343,37 +366,43 @@ public class PrefectureDaoImpl extends BaseDaoImpl implements PrefectureDao {
 	
 	public List getPrefectures(Prefecture prefecture) {
 		String tmpSql = "";
+		List param = new ArrayList<>();
 		if ((prefecture.getDwdm() != null)
 				&& (prefecture.getDwdm().length() > 0)) {
-			tmpSql = tmpSql + " and dwdm='" + prefecture.getDwdm() + "'";
+			tmpSql = tmpSql + " and dwdm=?";
+			param.add(prefecture.getDwdm());
 		}
 		if ((prefecture.getXjjg() != null)
 				&& (prefecture.getXjjg().length() > 0)) {
-			tmpSql = tmpSql + " and xjjg='" + prefecture.getXjjg() + "'";
+			tmpSql = tmpSql + " and xjjg=?";
+			param.add(prefecture.getXjjg());
 		}
 		if ((prefecture.getJglx() != null)
 				&& (prefecture.getJglx().length() > 0)) {
-			tmpSql = tmpSql + " and jglx='" + prefecture.getJglx() + "'";
+			tmpSql = tmpSql + " and jglx=?";
+			param.add(prefecture.getJglx());
 		}
 		if ((prefecture.getJgqz() != null)
 				&& (prefecture.getJgqz().length() > 0)) {
-			tmpSql = tmpSql + " and jgqz='" + prefecture.getJgqz() + "'";
+			tmpSql = tmpSql + " and jgqz=?";
+			param.add(prefecture.getJgqz());
 		}
 		if (tmpSql.length() > 4) {
 			tmpSql = " where " + tmpSql.substring(4, tmpSql.length());
 		}
 		tmpSql = "select * from frm_prefecture " + tmpSql
 				+ " order by dwdm,xjjg";
-		List list = this.queryForList(tmpSql, Prefecture.class);
+		List list = this.queryForList(tmpSql, Prefecture.class,param.toArray());
 		
 		return list;
 	}
 
 	public Prefecture getPrefecture(String glbm) {
-		String tmpSql = "select * from frm_prefecture where dwdm='" + glbm
-				+ "'";
+		List param = new ArrayList<>();
+		String tmpSql = "select * from frm_prefecture where dwdm=?";
+		param.add(glbm);
 		//List list = this.jdbcTemplate.queryForList(tmpSql, Prefecture.class);
-		List list = this.queryForList(tmpSql, Prefecture.class);
+		List list = this.queryForList(tmpSql,param.toArray(), Prefecture.class);
 		if ((list == null) || (list.size() == 0)) {
 			Prefecture d = new Prefecture();
 			d.setDwdm(glbm);
@@ -386,24 +415,33 @@ public class PrefectureDaoImpl extends BaseDaoImpl implements PrefectureDao {
 	}
 
 	public int insertPrefecture(Prefecture p)throws Exception {
-		StringBuffer sb = new StringBuffer("insert into frm_prefecture values(");
-		sb.append("'").append(p.getDwdm()).append("'");
-		sb.append(",'").append(p.getXjjg()).append("'")
-		.append(",'").append(p.getJglx()).append("'")
-		.append(",'").append(p.getJgqz()).append("'")
-		.append(",sysdate,'").append(p.getBz()==null?"":p.getBz()).append("') ");
+		List param = new ArrayList<>();
+		StringBuffer sb =
+				new StringBuffer("insert into frm_prefecture values(?,?,?,?,sysdate,?)");
+		param.add(p.getDwdm());
+		param.add(p.getXjjg());
+		param.add(p.getJglx());
+		param.add(p.getJgqz());
+		if (p.getBz()==null){
+			param.add("''");
+		}else {
+			param.add(p.getBz());
+		}
+
 		
-		return this.jdbcTemplate.update(sb.toString());
+		return this.jdbcTemplate.update(sb.toString(),param.toArray());
 	}
 
 	public int insertPrefectureTemp(Prefecture p) throws Exception{
-		StringBuffer sb = new StringBuffer("insert into frm_prefecture_temp values(");
-		sb.append("'").append(p.getDwdm()).append("'");
-		sb.append(",'").append(p.getXjjg()).append("'")
-		.append(",'").append(p.getJglx()).append("'")
-		.append(",'").append(p.getJgqz()).append("')");
+		List param = new ArrayList<>();
+		StringBuffer sb = new StringBuffer("insert into frm_prefecture_temp values(?,?,?,?)");
+		param.add(p.getDwdm());
+		param.add(p.getXjjg());
+		param.add(p.getJglx());
+		param.add(p.getJgqz());
+
 		
-		return this.jdbcTemplate.update(sb.toString());
+		return this.jdbcTemplate.update(sb.toString(),param.toArray());
 	}
 
 	public int delAllForPrefectureTemp(String glbm) throws Exception {
@@ -413,9 +451,9 @@ public class PrefectureDaoImpl extends BaseDaoImpl implements PrefectureDao {
 	}
 
 	public List getPrefectureTemp(String glbm) throws Exception {
-		String sql = "select distinct dwdm,xjjg,jglx,jgqz from frm_prefecture_temp where dwdm= '"+glbm+"'";
+		String sql = "select distinct dwdm,xjjg,jglx,jgqz from frm_prefecture_temp where dwdm= ?";
 		
-		return this.queryForList(sql, Prefecture.class);
+		return this.queryForList(sql,new Object[]{glbm}, Prefecture.class);
 	}
 	
 	

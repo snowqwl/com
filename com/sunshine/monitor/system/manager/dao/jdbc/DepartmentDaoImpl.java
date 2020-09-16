@@ -20,26 +20,34 @@ public class DepartmentDaoImpl extends BaseDaoImpl implements DepartmentDao {
 
 	public Map<String, Object> findDepartmentForMap(Map filter,Department department) throws Exception {
 		StringBuffer sql = new StringBuffer();
+		List param = new ArrayList<>();
 		if(StringUtils.isNotBlank(department.getJb())){
-			sql.append("  and jb='").append(department.getJb()).append("' ");
+			sql.append("  and jb=? ");
+			param.add(department.getJb());
 		}
 		
 		if(StringUtils.isNotBlank(department.getGlbm())){
-			sql.append("  and glbm like '%").append(department.getGlbm()).append("%' ");
+			sql.append("  and glbm like ? ");
+			param.add("%"+department.getGlbm()+"%");
 		}
 		
 		if(StringUtils.isNotBlank(department.getBmmc())){
-			sql.append(" and bmmc like '%").append(department.getBmmc()).append("%' ");
+			sql.append(" and bmmc like ? ");
+			param.add("%"+department.getBmmc()+"%");
 		}
-		
+
+		List v1 = new ArrayList<>();
 		StringBuffer sb = new StringBuffer("select glbm,bmmc,jb,jb_tb.dmsm1  as bmjb,de.lxdh1||'  '||de.lxdh2||' '||de.lxdh3||'  '||de.lxdh4||'  '||de.lxdh5  as lxdh ,zt_tb.dmsm1 as bmzt  from frm_department de,");
 		sb.append(" (select dmlb,dmz,dmsm1,dmsm2,dmsm3,dmsm4,dmsx,zt from frm_code  where dmlb='000001')jb_tb, ");
 		sb.append(" (select dmlb,dmz,dmsm1,dmsm2,dmsm3,dmsm4,dmsx,zt from frm_code  where dmlb='100010')zt_tb ");
 		sb.append(" where de.jb = jb_tb.dmz and de.zt = zt_tb.dmz ");
-		sb.append(" and glbm in (select xjjg  from frm_prefecture  where dwdm in(select xjjg from frm_prefecture where dwdm = '"+filter.get("dwdm").toString()+"')) ");
+		sb.append(" and glbm in (select xjjg  from frm_prefecture  where dwdm in(select xjjg from" +
+				" frm_prefecture where dwdm = ?)) ");
 		sb.append(sql).append(" order by glbm ");
+		v1.add(filter.get("dwdm").toString());
+		v1.addAll(param);
 		
-		return this.findPageForMap(sb.toString(), 
+		return this.findPageForMap(sb.toString(), v1.toArray(),
 				Integer.parseInt(filter.get("curPage").toString()), 
 				Integer.parseInt(filter.get("pageSize").toString()));
 	}
@@ -81,10 +89,11 @@ public class DepartmentDaoImpl extends BaseDaoImpl implements DepartmentDao {
 		
 		int result = 0;
 		StringBuffer sb = new StringBuffer();
-		
 		String sql = "SELECT count(*)  from frm_department where glbm = '"+d.getGlbm()+"'";
-		int r = this.jdbcTemplate.queryForObject(sql, Integer.class);
-		
+
+		int r = this.jdbcTemplate.queryForObject(sql, new Object[]{d.getGlbm()},Integer.class);
+
+		List param = new ArrayList<>();
 		if(r >0){
 			sb.append(" UPDATE frm_department set ");
 			sb.append(" bmmc = '").append(d.getBmmc()).append("' ");
@@ -136,9 +145,9 @@ public class DepartmentDaoImpl extends BaseDaoImpl implements DepartmentDao {
 	}
 
 	public int getUserCountForDepartment(String glbm) throws Exception {
-		String sql = "select count(*) c from frm_sysuser  where glbm = '" + glbm + "'";
+		String sql = "select count(*) c from frm_sysuser  where glbm = ?";
 		
-		return this.jdbcTemplate.queryForInt(sql);
+		return this.jdbcTemplate.queryForInt(sql,new Object[]{glbm});
 	}
 
 	public int removeDepartment(String glbm) throws Exception {
@@ -157,20 +166,20 @@ public class DepartmentDaoImpl extends BaseDaoImpl implements DepartmentDao {
 
 	public List getDepartmentListForGlbm(String glbm,String sqlCon) throws Exception {
 		
-		String sql = "select *  from frm_department  where glbm like '"+glbm+"%'  and zt='1'  " ;
+		String sql = "select *  from frm_department  where glbm like ?  and zt='1'  " ;
 		if(sqlCon != null) sql += sqlCon;
 		
-		return this.queryForList(sql, Department.class);
+		return this.queryForList(sql, new Object[]{glbm+"%"},Department.class);
 	}
 
 	/***
 	 * 获取上级部门集合
 	 */
 	public List<Department> getHigherDepartmentList(String glbm) throws Exception {
-		String sql = "select *  from frm_department  where glbm in(select dwdm  from frm_prefecture where xjjg = '"
-					+ glbm +"')";
+		String sql = "select *  from frm_department  where glbm in(select dwdm  from " +
+				"frm_prefecture where xjjg = ?)";
 		
-		return this.queryForList(sql, Department.class);
+		return this.queryForList(sql, new Object[]{glbm},Department.class);
 	}
 	
 	/**
@@ -208,8 +217,8 @@ public class DepartmentDaoImpl extends BaseDaoImpl implements DepartmentDao {
 		List<Department> list = new ArrayList<Department>();
 		 String sql = "select code as glbm, org_name as bmmc from v_org where org_id = "
 		 		+ "(select t1.org_id from v_sm_user t,v_org_user t1 where t.user_id = "
-		 		+ "t1.user_id and t.user_name ='" + userId + "')";
-		list = this.queryForList(sql, Department.class);
+		 		+ "t1.user_id and t.user_name =?)";
+		list = this.queryForList(sql, new Object[]{userId},Department.class);
 		return list;
 	}
 }

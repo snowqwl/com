@@ -18,10 +18,11 @@ public class PublicDaoImpl extends BaseDaoImpl implements PublicDao {
 	}
 
 	public Map FullTextSearch(String search_text) throws Exception {
-		String gate_sql = "SELECT KDBH AS XH,KDMC AS DMSM FROM CODE_GATE WHERE KKZT=1 AND  KDMC like '%"+search_text+"%' order by kdbh ";
+		String gate_sql = "SELECT KDBH AS XH,KDMC AS DMSM FROM CODE_GATE WHERE KKZT=1 AND  KDMC " +
+				"like ? order by kdbh ";
 		//List<Map<String,Object>> gatelist = this.jdbcTemplate.queryForList(gate_sql);
-
-		Map map = this.findPageForMap(gate_sql, 1, 10);
+		String text="%"+search_text+"%";
+		Map map = this.findPageForMap(gate_sql,new Object[]{text},1,10);
 		return map;
 	}
 

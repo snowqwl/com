@@ -1,5 +1,6 @@
 package com.sunshine.monitor.system.manager.dao.jdbc;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.stereotype.Repository;
@@ -26,18 +27,21 @@ public class UrlDaoImpl extends BaseDaoImpl implements UrlDao {
 
 	public List<CodeUrl> getUrls(CodeUrl d) throws Exception {
 		String sql = "";
+		List param = new ArrayList<>();
 		if ((d != null) && (d.getJb() != null) && (d.getJb().length() > 0)) {
-			sql = sql + " or jb='" + d.getJb() + "'";
+			sql = sql + " or jb=?";
+			param.add(d.getJb());
 		}
 		if ((d != null) && (d.getSjjd() != null) && (d.getSjjd().length() > 0)) {
-			sql = sql + " or sjjd='" + d.getSjjd() + "'";
+			sql = sql + " or sjjd=?";
+			param.add(d.getSjjd());
 		}
 		if (sql.length() > 1) {
 			sql = " WHERE " + sql.substring(3, sql.length());
 		}
 		sql = "SELECT DWDM, URL, PORT, CONTEXT, JB, JDMC, SN, SJJD, BZ FROM CODE_URL " + sql + " order by dwdm asc";
 		
-		return this.queryForList(sql, CodeUrl.class);
+		return this.queryForList(sql,param.toArray(), CodeUrl.class);
 	}
 
 	public List<CodeUrl> getCodeUrls() throws Exception {
@@ -47,8 +51,9 @@ public class UrlDaoImpl extends BaseDaoImpl implements UrlDao {
 	
 	public List<CodeUrl> getCodeUrls(String jb) throws Exception {
 		//String sql = "select * from code_url where jb='"+jb+"' order by dwdm";
-		String sql = "SELECT DWDM, URL, PORT, CONTEXT, JB, JDMC, SN, SJJD, BZ FROM CODE_URL WHERE jb = " + jb + " order by nlssort(JDMC, 'NLS_SORT=SCHINESE_PINYIN_M') ";
-		return this.queryForList(sql, CodeUrl.class);
+		String sql = "SELECT DWDM, URL, PORT, CONTEXT, JB, JDMC, SN, SJJD, BZ FROM CODE_URL WHERE" +
+				" jb = ? order by nlssort(JDMC, 'NLS_SORT=SCHINESE_PINYIN_M') ";
+		return this.queryForList(sql,new Object[]{jb}, CodeUrl.class);
 	}
 
 	public CodeUrl getUrl(String dwdm) throws Exception {

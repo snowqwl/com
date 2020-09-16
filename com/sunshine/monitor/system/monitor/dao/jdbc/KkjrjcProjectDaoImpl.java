@@ -1,6 +1,7 @@
 package com.sunshine.monitor.system.monitor.dao.jdbc;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -57,10 +58,14 @@ public class KkjrjcProjectDaoImpl extends BaseDaoImpl implements KkjrjcProjectDa
 		
         String kssj = last_Month+"-26 00:00:00";
         String jssj = this_Month+"-25 23:59:59";
-       
+
+        List param = new ArrayList<>();
        StringBuffer sb = new StringBuffer("select count(distinct cstr_col10) as bzxs  from Monitor.t_monitor_jg_integrate_detail where khfa_id = '26' and date_col02 ");
-       sb.append(" between to_date('"+kssj+"','yyyy-mm-dd hh24:mi:ss') and to_Date('"+jssj+"','yyyy-mm-dd hh24:mi:ss')");      /**  add_months(sysdate, -1)  */
-       List list = this.getRecordData(sb.toString(),null);
+       sb.append(" between to_date(?,'yyyy-mm-dd hh24:mi:ss') and to_Date(?,'yyyy-mm-dd " +
+			   "hh24:mi:ss')");      /**  add_months(sysdate, -1)  */
+       param.add(kssj);
+       param.add(jssj);
+       List list = this.getRecordData(sb.toString(),param.toArray(),null);
        if (list != null && list.size() > 0) {
     	   kkzxMap = (Map) list.get(0);
        }
@@ -71,15 +76,22 @@ public class KkjrjcProjectDaoImpl extends BaseDaoImpl implements KkjrjcProjectDa
 	}
 	
 	public int getKkzxCount(String kssj,String jssj) throws Exception {
+		List param = new ArrayList<>();
 		StringBuffer sb= new StringBuffer("select count(1) from monitor.t_monitor_jg_integrate_detail t where t.khfa_id = '27' and workitem_id =(");
 		sb.append("select max(to_number(workitem_id)) from monitor.t_monitor_jg_integrate_detail where khfa_id = '27' and date_col01 ");
-		sb.append(" between to_date('"+kssj+"','yyyy-mm-dd hh24:mi:ss') and to_Date('"+jssj+"','yyyy-mm-dd hh24:mi:ss')) ");
+		sb.append(" between to_date(?,'yyyy-mm-dd hh24:mi:ss') and to_Date(?,'yyyy-mm-dd" +
+				" hh24:mi:ss')) ");
 		sb.append("and t.cstr_col02 not in(select cstr_col10 from monitor.t_monitor_jg_integrate_detail  where khfa_id = '26' and workitem_id =");
 		sb.append("(select max(to_number(workitem_id)) from monitor.t_monitor_jg_integrate_detail where khfa_id = '26' and date_col02 ");
-		sb.append(" between to_date('"+kssj+"','yyyy-mm-dd hh24:mi:ss') and to_Date('"+jssj+"','yyyy-mm-dd hh24:mi:ss') ");
+		sb.append(" between to_date(?,'yyyy-mm-dd hh24:mi:ss') and to_Date(?,'yyyy-mm-dd" +
+				" hh24:mi:ss') ");
 		sb.append(")) group by workitem_id");
+		param.add(kssj);
+		param.add(jssj);
+		param.add(kssj);
+		param.add(jssj);
 		System.out.println(sb.toString());
-		List list =  this.jdbcTemplate.queryForList(sb.toString(), Integer.class);
+		List list =  this.jdbcTemplate.queryForList(sb.toString(), param.toArray(),Integer.class);
 		if(list.size()>0){
 			return Integer.parseInt(list.get(0).toString());
 		}

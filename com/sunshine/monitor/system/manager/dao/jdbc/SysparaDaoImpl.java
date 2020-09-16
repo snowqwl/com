@@ -30,10 +30,11 @@ public class SysparaDaoImpl extends BaseDaoImpl implements SysparaDao {
 	}
 
 	public Map<String,Object> getSysparas(Map filter) throws Exception {
-		String tmpSql = "Select * from frm_syspara Where (sfgy='0' and glbm='"
-			      + filter.get("glbm") + "') or (sfgy='1') order by xssx";
+		String tmpSql = "Select * from frm_syspara Where (sfgy='0' and glbm=?) or (sfgy='1') " +
+				"order by xssx";
+
 		//List<Syspara> list = this.jdbcTemplate.queryForList(tmpSql, Syspara.class);
-		Map<String,Object> map = this.findPageForMap(tmpSql, 
+		Map<String,Object> map = this.findPageForMap(tmpSql, new Object[]{filter.get("glbm")},
 				Integer.parseInt(filter.get("curPage").toString()),
 				Integer.parseInt(filter.get("pageSize").toString()));
 		return map;

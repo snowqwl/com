@@ -1,5 +1,6 @@
 package com.sunshine.monitor.system.manager.dao.jdbc;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -18,18 +19,26 @@ public class TztbDaoImpl extends BaseDaoImpl implements TztbDao {
 		StringBuffer sb = new StringBuffer();
 		sb.append(" select id,title,lb,fileurl,content,cjr,cjsj,showcolor from frm_tztb c");
 		sb.append(" where 1=1 ");
-		if(StringUtils.isNotBlank(bean.getTitle()))
-			sb.append(" and title like '%").append(bean.getTitle()).append("%'");
-		
-		if(StringUtils.isNotBlank(bean.getKssj()))
-			sb.append(" and cjsj >=to_date('").append(bean.getKssj()).append("00:00:00', 'yyyy-mm-dd hh24:mi:ss') ");
-		
-		if(StringUtils.isNotBlank(bean.getJssj()))
-			sb.append(" and cjsj <=to_date('").append(bean.getJssj()).append("23:59:59', 'yyyy-mm-dd hh24:mi:ss') ");
+		List param = new ArrayList<>();
+		if(StringUtils.isNotBlank(bean.getTitle())){
+			sb.append(" and title like ?");
+			param.add("%"+bean.getTitle()+"%");
+		}
+
+		if(StringUtils.isNotBlank(bean.getKssj())){
+			sb.append(" and cjsj >=to_date(?, 'yyyy-mm-dd hh24:mi:ss') ");
+			param.add(bean.getKssj()+"00:00:00");
+		}
+
+		if(StringUtils.isNotBlank(bean.getJssj())){
+			sb.append(" and cjsj <=to_date(?, 'yyyy-mm-dd hh24:mi:ss') ");
+			param.add(bean.getJssj()+"23:59:59");
+		}
+
 
 		sb.append(" order by id desc ");
 		
-		Map<String, Object> queryMap = this.findPageForMap(sb.toString(),
+		Map<String, Object> queryMap = this.findPageForMap(sb.toString(),param.toArray(),
 				Integer.parseInt(filter.get("curPage").toString()), 
 				Integer.parseInt(filter.get("pageSize").toString()));
 		return queryMap;
@@ -37,42 +46,61 @@ public class TztbDaoImpl extends BaseDaoImpl implements TztbDao {
 	
 	@Override
 	public int save(TztbBean bean) throws Exception {
+		List param = new ArrayList<>();
 		String sql = "insert into frm_tztb(id,title,fileurl,content,cjr,cjsj,showcolor) "
-				+ "values(seq_tztb_id.nextval,'"+bean.getTitle()+"','"+bean.getFileurl()+"','"+bean.getContent()+"','"+bean.getCjr()+"',sysdate,'"+bean.getShowcolor()+"')";
+				+ "values(seq_tztb_id.nextval,?,?,?," +
+				"?,sysdate,?)";
+		param.add(bean.getTitle());
+		param.add(bean.getFileurl());
+		param.add(bean.getContent());
+		param.add(bean.getCjr());
+		param.add(bean.getShowcolor());
 		return this.jdbcTemplate.update(sql);
 	}
 	
 	@Override
 	public int delete(String zgId) throws Exception {
-		String tmpSql = "delete from frm_tztb where id= '"+zgId+"'";
-		return this.jdbcTemplate.update(tmpSql);
+		String tmpSql = "delete from frm_tztb where id= ?";
+		return this.jdbcTemplate.update(tmpSql,new Object[]{zgId});
 		
 	}
 	
 	@Override
 	public int update(TztbBean bean) throws Exception {
-		String tmpSql = "update frm_tztb set title='"+bean.getTitle()+"',fileurl='"+bean.getFileurl()+"',content='"+bean.getContent()+"',showcolor='"+bean.getShowcolor()+"' where id= '"+bean.getId()+"'";
+		List param = new ArrayList<>();
+		String tmpSql =
+				"update frm_tztb set title=?,fileurl=?,content=?,showcolor" +
+						"=? where id= ?";
+		param.add(bean.getTitle());
+		param.add(bean.getFileurl());
+		param.add(bean.getContent());
+		param.add(bean.getShowcolor());
+		param.add(bean.getId());
 		return this.jdbcTemplate.update(tmpSql);
 		
 	}
 
 	@Override
 	public TztbBean getById(String Id) throws Exception {
-		String sb = "select id,title,lb,fileurl,content,cjr,cjsj,showcolor from frm_tztb where id='"+Id+"'";
-		return this.queryForObject(sb, TztbBean.class);
+		String sb = "select id,title,lb,fileurl,content,cjr,cjsj,showcolor from frm_tztb where " +
+				"id=?";
+		return this.queryForObject(sb,new Object[]{Id}, TztbBean.class);
 	}
 	
 	@Override
 	public Map<String, Object> queryForMainPage(Map<String, Object> filter,String title) throws Exception {
 		StringBuffer sb = new StringBuffer();
+		List param = new ArrayList<>();
 		sb.append("select id,title,fileurl,content,to_char(cjsj,'yyyy-MM-dd') as cjsj,showcolor from frm_tztb ");
 		if(StringUtils.isNotBlank(title)){
-			sb.append(" where title like '%").append(title).append("%'");
-			sb.append(" or content like '%").append(title).append("%'");
+			sb.append(" where title like ?");
+			sb.append(" or content like ?");
+			param.add("%"+title+"%");
+			param.add("%"+title+"%");
 		}
 		sb.append(" order by id desc ");
 		
-		Map<String, Object> queryMap = this.findPageForMap(sb.toString(),
+		Map<String, Object> queryMap = this.findPageForMap(sb.toString(),param.toArray(),
 				Integer.parseInt(filter.get("curPage").toString()), 
 				Integer.parseInt(filter.get("pageSize").toString()));
 		

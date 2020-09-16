@@ -24,7 +24,7 @@ public interface ExpandBaseDao extends BaseDao {
 	 * @throws DaoAccessException
 	 */
 	public int getRecordCounts(String sql, int limit);
-	
+	public int getRecordCounts(String sql,Object[] array, int limit);
 	
 	/**
 	 * 
@@ -36,6 +36,7 @@ public interface ExpandBaseDao extends BaseDao {
 	 * @throws DaoAccessException
 	 */
 	public int getRecordCounts(String sql,JdbcTemplate jdt, int limit);
+
 	
 	/**
 	 * 

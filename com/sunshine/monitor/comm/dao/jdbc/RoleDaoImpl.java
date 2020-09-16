@@ -1,8 +1,12 @@
 package com.sunshine.monitor.comm.dao.jdbc;
 
-import java.util.List;
-import java.util.Map;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.util.*;
 
+import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.BatchPreparedStatementSetter;
+import org.springframework.jdbc.core.PreparedStatementSetter;
 import org.springframework.stereotype.Repository;
 
 import com.sunshine.monitor.comm.bean.Role;
@@ -12,52 +16,58 @@ import com.sunshine.monitor.comm.dao.RoleDao;
 public class RoleDaoImpl extends BaseDaoImpl implements RoleDao {
 
 	public Role getRoleById(String jsdh)throws Exception {
-		String sql = "SELECT JSDH, JSMC, JSSX, JSJB, BZ,TYPE,PX FROM JM_ROLE WHERE JSDH = '" + jsdh +"'";
+		String sql = "SELECT JSDH, JSMC, JSSX, JSJB, BZ,TYPE,PX FROM JM_ROLE WHERE JSDH = ?";
 		//System.out.println(sql);
-		return queryList(sql, Role.class).get(0);
+		return queryList(sql, Role.class,jsdh).get(0);
 	}
 
 	public Map<String, Object> findRoleListByPage(Map<?, ?> condition)
 			throws Exception {
+		List param = new ArrayList<>();
 		StringBuffer sql = new StringBuffer(
 				"SELECT JSDH, JSMC, JSSX, JSJB, BZ, TYPE,PX FROM JM_ROLE WHERE 1=1 ");
 		if (condition.get("jsdh") != null && !"".equals(condition.get("jsdh"))) {
-			sql.append(" and JSDH = '").append(condition.get("jsdh")).append("'");
+			sql.append(" and JSDH = ?");
+			param.add(condition.get("jsdh"));
 		}
 		if (condition.get("jsmc") != null && !"".equals(condition.get("jsmc"))) {
-			sql.append(" and JSMC like '%");
-			sql.append(condition.get("jsmc"));
-			sql.append("%'");
+			sql.append(" and JSMC like ?");
+			param.add("%"+condition.get("jsmc")+"%");
+
 		}
 		if (condition.get("cxdh") != null && !"".equals(condition.get("cxdh"))) {
 			String[] cd = condition.get("cxdh").toString().split(",");
-			sql.append(" and jsdh in (select jsdh from jm_rolemenu where cxdh in(");
-			sql.append(condition.get("cxdh"));
-			sql.append(") group by jsdh having count(1) = ");
-			sql.append(cd.length).append(")");
+			sql.append(" and jsdh in (select jsdh from jm_rolemenu where cxdh in(?) group by jsdh having count(1) = ?)");
+			param.add(condition.get("cxdh"));
+			param.add(cd.length);
 		}
 		sql.append(" and jsdh<>100 and type<>100 ");
-		sql.append(" order by ");
-		sql.append(condition.get("sort"));
-		sql.append(" ");
-		sql.append(condition.get("order"));
+		sql.append(" order by ? ?");
+		param.add(condition.get("sort"));
+		param.add(condition.get("order"));
 //		System.out.println(sql);
-		return findPageForMap(sql.toString(), Integer.parseInt(condition.get(
+		Object[] array = param.toArray(new Object[param.size()]);
+		return findPageForMap(sql.toString(), array, Integer.parseInt(condition.get(
 				"page").toString()), Integer.parseInt(condition.get("rows")
 				.toString()));
 	}
 
-	public boolean insertRole(Role role) throws Exception {
-		StringBuffer sql = new StringBuffer(50);
-		sql.append("INSERT INTO JM_ROLE(JSDH,JSMC,JSSX,JSJB,BZ,TYPE,PX) VALUES(ROLE_JSDH_SEQ.NEXTVAL,'");
-		sql.append(role.getJsmc()).append("','");
-		sql.append((role.getJssx() == null) ? "" : role.getJssx()).append("','");
-		sql.append((role.getJsjb() == null) ? "" : role.getJsjb()).append("','");
-		sql.append((role.getBz() == null) ? "" : role.getBz()).append("','");
-		sql.append((role.getType() == null) ? "" : role.getType()).append("','");
-		sql.append((role.getPx() == null) ? "" : role.getPx()).append("')");
-		boolean flag = (this.jdbcTemplate.update(sql.toString())>0)?true:false;
-		return flag ;
+	public boolean insertRole(final Role role) throws Exception {
+		String sql = "INSERT INTO JM_ROLE(JSDH,JSMC,JSSX,JSJB,BZ,TYPE,PX) VALUES(ROLE_JSDH_SEQ" +
+				".NEXTVAL,?,?,?,?,?)";
+		int result = this.jdbcTemplate.update(sql, new PreparedStatementSetter() {
+			@Override
+			public void setValues(PreparedStatement ps) throws SQLException {
+				ps.setString(1, role.getJsmc());
+				ps.setString(2, role.getJssx());
+				ps.setString(3, role.getJsjb());
+				ps.setString(4, role.getBz());
+				ps.setString(5, role.getType());
+				ps.setString(6, role.getPx());
+			}
+		});
+		boolean flag=(result>0)?true:false;
+		return flag;
 	}
 	
 	/**
@@ -66,8 +76,9 @@ public class RoleDaoImpl extends BaseDaoImpl implements RoleDao {
 	/*
 	 * 2018-8-13，角色与用户关联时，建议不允许删除
 	 */
-	public boolean batchDeleteRoles(String[] jsdhs) throws Exception {
+	public boolean batchDeleteRoles(final String[] jsdhs) throws Exception {
 		boolean flag = true ;
+
 		for (String jsdh : jsdhs) {
 			String sql="select count(1) from jm_userrole t where t.jsdh='"+jsdh+"'";
 			int x = this.jdbcTemplate.queryForInt(sql);
@@ -75,13 +86,14 @@ public class RoleDaoImpl extends BaseDaoImpl implements RoleDao {
 				return false;
 			}
 		}
-		String[] sqlArray = new String[jsdhs.length];
 		int i = 0 ;
+		List param = new ArrayList<>();
+		String sql="DELETE FROM JM_ROLE WHERE JSDH = ?";
 		for (String jsdh : jsdhs) {
-			sqlArray[i]="DELETE FROM JM_ROLE WHERE JSDH = " + jsdh;
+			param.add(jsdh);
 			i = i + 1 ;
 		}
-		int[] result = this.jdbcTemplate.batchUpdate(sqlArray);
+		int[] result = this.jdbcTemplate.batchUpdate(sql,param);
 		for (int j = 0; i < result.length; j++) {
 			if(result[j]<0){
 				// 第i+1条数据执行失败，只要有一条数据执行失败，则结果为失败
@@ -91,18 +103,22 @@ public class RoleDaoImpl extends BaseDaoImpl implements RoleDao {
 		return flag ;
 	}
 
-	public boolean updateRole(Role role) throws Exception {
+	public boolean updateRole(final Role role) throws Exception {
 		boolean flag = false ;
-		StringBuffer sql = new StringBuffer(20);
-		sql.append("UPDATE JM_ROLE SET ");
-		sql.append("JSMC = '").append(role.getJsmc()).append("',");
-		sql.append("JSSX = '").append(role.getJssx()).append("',");
-		sql.append("JSJB = '").append(role.getJsjb()).append("',");
-		sql.append("BZ = '").append(role.getBz()).append("', ");
-		sql.append("TYPE = '").append(role.getType()).append("', ");
-		sql.append("PX = '").append(role.getPx()).append("' ");
-		sql.append(" WHERE JSDH = '").append(role.getJsdh()).append("'");
-		int result = this.jdbcTemplate.update(sql.toString()) ;
+		String sql = "UPDATE JM_ROLE SET JSMC = ?,JSSX = ?,JSJB = ?,BZ = ?,TYPE = ?,PX = ? WHERE " +
+				"JSDH = ?";
+		int result = this.jdbcTemplate.update(sql, new PreparedStatementSetter() {
+			@Override
+			public void setValues(PreparedStatement ps) throws SQLException {
+				ps.setString(1,role.getJsmc());
+				ps.setString(2,role.getJssx());
+				ps.setString(3,role.getJsjb());
+				ps.setString(4,role.getBz());
+				ps.setString(5,role.getType());
+				ps.setString(6,role.getPx());
+				ps.setString(7,role.getJsdh());
+			}
+		}) ;
 		if(result >= 1) {
 			flag = true ;
 		}
@@ -121,8 +137,9 @@ public class RoleDaoImpl extends BaseDaoImpl implements RoleDao {
 	public boolean getRoleTreeIsParent(String param) throws Exception {
 		// TODO Auto-generated method stub
 		boolean b = false;
-		String sql=" select JSDH from JM_ROLE  where type='"+param+"'";
-		int count = this.getRecordCounts(sql, 1000);
+		String sql=" select JSDH from JM_ROLE  where type=?";
+		int count = this.getRecordCounts(sql, 1000,param);
+
 		if(count>0){
 			b=true;
 		}

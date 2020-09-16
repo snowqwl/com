@@ -554,16 +554,19 @@ public class SystemDaoImpl  extends BaseDaoImpl implements SystemDao {
 	
 	public List getDistrictsByCity(String city) throws Exception {
         String sql = "";
+        List param = new ArrayList<>();
         if(city != null && !"".equals(city)) {
-        	sql = " where xzqhdm like '" + city.substring(0, 4) + "%' ";
+        	sql = " where xzqhdm like ? ";
+        	param.add(city.substring(0, 4)+"%");
         }
         sql = " SELECT * FROM FRM_XZQH " + sql + " ORDER BY XZQHDM";
-		return queryList(sql,District.class);
+		return queryList(sql,param.toArray(),District.class);
 	}
 	
 	public String getDistrictNameByXzqh(String xzqhdm) throws Exception {
-		String sql = "select xzqhmc from frm_xzqh where xzqhdm = '"+xzqhdm +"'";
-		List list=this.jdbcTemplate.queryForList(sql);
+		String sql = "select xzqhmc from frm_xzqh where xzqhdm = ?";
+
+		List list=this.jdbcTemplate.queryForList(sql,new Object[]{xzqhdm});
 				if(list.size()!=0){
 					Map map=(Map)list.get(0);
 					return map.get("xzqhmc").toString();
@@ -574,25 +577,24 @@ public class SystemDaoImpl  extends BaseDaoImpl implements SystemDao {
 
 	public List getRoadsByFilter(String xzqh) throws Exception {
         StringBuffer sb=new StringBuffer();
-        sb.append("SELECT * FROM FRM_DL WHERE XZQH LIKE '%")
-          .append(xzqh).append("%' ORDER BY DLDM");
-		return queryList(sb.toString(),Road.class);
+        sb.append("SELECT * FROM FRM_DL WHERE XZQH LIKE ? ORDER BY DLDM");
+
+		return queryList(sb.toString(),new Object[]{"%"+xzqh+"%"},Road.class);
 	}
 	
 	public List getCrossingByFilter(String xzqh, String dldm) throws Exception {
 		StringBuffer sb=new StringBuffer();
-		sb.append("SELECT * FROM FRM_LKLD WHERE XZQH = '")
-		  .append(xzqh)
-		  .append("' AND DLDM = '")
-		  .append(dldm)
-		  .append("' ORDER BY LDDM");
-		return queryList(sb.toString(),Crossing.class);
+		List param = new ArrayList<>();
+		sb.append("SELECT * FROM FRM_LKLD WHERE XZQH = ? AND DLDM = ? ORDER BY LDDM");
+		param.add(xzqh);
+		param.add(dldm);
+		return queryList(sb.toString(),param.toArray(),Crossing.class);
 	}
 	
 	public List getTrafficDepartment(String xzqh) throws Exception {
         StringBuffer sb=new StringBuffer();
-        sb.append("SELECT * FROM FRM_GLBM WHERE GLBM LIKE '").append(xzqh).append("%'");
-		return queryList(sb.toString(),TrafficDepartment.class);
+        sb.append("SELECT * FROM FRM_GLBM WHERE GLBM LIKE ?");
+		return queryList(sb.toString(),new Object[]{xzqh+"%"},TrafficDepartment.class);
 	}
 	public String getTrafficDepartmentName(String dwdm) throws Exception {
 		StringBuffer sb=new StringBuffer();
@@ -604,39 +606,44 @@ public class SystemDaoImpl  extends BaseDaoImpl implements SystemDao {
 
 	public void updateStatSystem(StatSystem ss) {
 		//先查询是否存在地市记录
-		String select_sql = "select count(1) from stat_system where dwdm = '"+ss.getDwdm()+"'";
-		int count = this.jdbcTemplate.queryForInt(select_sql);
+		String select_sql = "select count(1) from stat_system where dwdm = ?";
+		int count = this.jdbcTemplate.queryForInt(select_sql,new Object[]{ss.getDwdm()});
+		List param = new ArrayList<>();
 		if(count == 0) {
 			//插入
-			String insert_sql = "insert into stat_system(dwdm,dwmc,jq,xt,jr,gxsj) values('"
-				+ss.getDwdm()+"','"
-				+ss.getDwmc()+"','"
-				+ss.getJq()+"','"
-				+ss.getXt()+"','"
-				+ss.getJr()+"',"
-				+"sysdate)";
-			this.jdbcTemplate.update(insert_sql);
+			String insert_sql = "insert into stat_system(dwdm,dwmc,jq,xt,jr,gxsj) values(?,?,?,?," +
+					"?,sysdate)";
+			param.add(ss.getDwdm());
+			param.add(ss.getDwmc());
+			param.add(ss.getJq());
+			param.add(ss.getXt());
+			param.add(ss.getJr());
+			this.jdbcTemplate.update(insert_sql,param.toArray());
 		} else {
-			String update_sql = "update stat_system set jq = '"
-				+ss.getJq()+"' ,xt = '"
-				+ss.getXt() +"' ,jr = '"
-				+ss.getJr() +"',gxsj = sysdate"+
-				" where dwdm = '"+ss.getDwdm()+"'";
-			this.jdbcTemplate.update(update_sql);
+			String update_sql = "update stat_system set jq = ? ,xt = ? ,jr = ?,gxsj = sysdate"+
+				" where dwdm = ?";
+			param.add(ss.getJq());
+			param.add(ss.getXt());
+			param.add(ss.getJr());
+			param.add(ss.getDwdm());
+			this.jdbcTemplate.update(update_sql,param.toArray());
 		}
 		
 	}
 	public List<String> getCityNames(String[] dwdm) throws Exception {
 		StringBuffer sb = new StringBuffer();
 		sb.append(" select jdmc from code_url where ");
+		List param = new ArrayList<>();
 		for(int i = 0; i<dwdm.length;i++){
 		    if(i==0){
-		    	sb.append(" dwdm = '"+dwdm[i]+"'");
+		    	sb.append(" dwdm = ?");
+		    	param.add(dwdm[i]);
 		    }else{
-		    	sb.append(" or dwdm = '"+dwdm[i]+"'");
+		    	sb.append(" or dwdm = ?");
+		    	param.add(dwdm[i]);
 		    }
 		}
-		List<String> list= this.jdbcTemplate.queryForList(sb.toString(),String.class);
+		List<String> list= this.jdbcTemplate.queryForList(sb.toString(),param.toArray(),String.class);
 		return list;
 	}
 
@@ -690,14 +697,17 @@ public class SystemDaoImpl  extends BaseDaoImpl implements SystemDao {
 	}
 
 	public List<Map<String, Object>> getXzqhTree(String dwdm) throws Exception {
+		List param = new ArrayList<>();
 		StringBuffer sql = new StringBuffer("select xzqhdm as id,xzqhmc as name," +
 				"pid as pid,jb as JB from frm_xzqh where 1=1  ");
 		if(StringUtils.isNotBlank(dwdm)){
-			sql.append(" and pid = '").append(dwdm).append("'");
-			sql.append(" or xzqhdm = '").append(dwdm).append("' ");
+			sql.append(" and pid = ?");
+			sql.append(" or xzqhdm = ? ");
+			param.add(dwdm);
+			param.add(dwdm);
 		}
 		sql.append(" order by xzqhxh,xzqhdm ");
-		return this.jdbcTemplate.queryForList(sql.toString()); 
+		return this.jdbcTemplate.queryForList(sql.toString(),param.toArray());
 	}
 	
 	public List getCityList() throws Exception{
@@ -708,9 +718,9 @@ public class SystemDaoImpl  extends BaseDaoImpl implements SystemDao {
 	public String getBaseConnectionState(String ds)throws Exception{
 		int n = 0;
 		String flagstr = "";
-		String sql = " select count(1) from veh_realpass@"+ds;
+		String sql = " select count(1) from ?";
 		try{
-		n = this.jdbcTemplate.queryForInt(sql);
+		n = this.jdbcTemplate.queryForInt(sql,new Object[]{"veh_realpass@"+ds});
 		
 		}catch(Exception e){
 			flagstr = ds;

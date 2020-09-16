@@ -1,5 +1,6 @@
 package com.sunshine.monitor.system.manager.dao.jdbc;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -16,22 +17,33 @@ public class ZgfxDaoImpl extends BaseDaoImpl implements ZgfxDao {
 	@Override
 	public Map<String, Object> queryList(Map<String, Object> filter,ZgfxBean bean) throws Exception {
 		StringBuffer sb = new StringBuffer();
+		List param = new ArrayList<>();
 		sb.append(" select id,name,bz,isshow,ispush,yxsj,status,fileurl,sbr,sbdw,sbdwmc from frm_zgfx c");
 		sb.append(" where 1=1 ");
-		if(StringUtils.isNotBlank(bean.getName()))
-			sb.append(" and name like '%").append(bean.getName()).append("%'");
-		
-		if(StringUtils.isNotBlank(bean.getIsshow()))
-			sb.append(" and isshow = '").append(bean.getIsshow()).append("' ");
-		
-		if(StringUtils.isNotBlank(bean.getIspush()))
-			sb.append(" and ispush = '").append(bean.getIspush()).append("' ");
-		
-		if(StringUtils.isNotBlank(bean.getKssj()))
-			sb.append(" and yxsj >=to_date('").append(bean.getKssj()).append("00:00:00', 'yyyy-mm-dd hh24:mi:ss') ");
-		
-		if(StringUtils.isNotBlank(bean.getJssj()))
-			sb.append(" and yxsj <=to_date('").append(bean.getJssj()).append("23:59:59', 'yyyy-mm-dd hh24:mi:ss') ");
+		if(StringUtils.isNotBlank(bean.getName())){
+			sb.append(" and name like ？");
+			param.add("%"+bean.getName()+"%");
+		}
+
+		if(StringUtils.isNotBlank(bean.getIsshow())){
+			sb.append(" and isshow = ? ");
+			param.add(bean.getIsshow());
+		}
+
+		if(StringUtils.isNotBlank(bean.getIspush())){
+			sb.append(" and ispush = ? ");
+			param.add(bean.getIspush());
+		}
+
+		if(StringUtils.isNotBlank(bean.getKssj())){
+			sb.append(" and yxsj >=to_date(?, 'yyyy-mm-dd hh24:mi:ss') ");
+			param.add(bean.getKssj()+"00:00:00");
+		}
+
+		if(StringUtils.isNotBlank(bean.getJssj())){
+			sb.append(" and yxsj <=to_date(?, 'yyyy-mm-dd hh24:mi:ss') ");
+			param.add(bean.getJssj()+"23:59:59");
+		}
 
 		sb.append(" and status = '0' ");//是否有效
 		sb.append(" and yxsj>sysdate ");//有效日期
@@ -39,7 +51,7 @@ public class ZgfxDaoImpl extends BaseDaoImpl implements ZgfxDao {
 		//sb.append(" and ispush = '0' ");//是否显示
 		sb.append(" order by id desc ");
 		
-		Map<String, Object> queryMap = this.findPageForMap(sb.toString(),
+		Map<String, Object> queryMap = this.findPageForMap(sb.toString(),param.toArray(),
 				Integer.parseInt(filter.get("curPage").toString()), 
 				Integer.parseInt(filter.get("pageSize").toString()));
 		return queryMap;
@@ -47,29 +59,55 @@ public class ZgfxDaoImpl extends BaseDaoImpl implements ZgfxDao {
 	
 	@Override
 	public int save(ZgfxBean bean) throws Exception {
+		List param = new ArrayList<>();
 		String sql = "insert into frm_zgfx(id,name,bz,isshow,ispush,yxsj,status,fileurl,sbr,sbdw,sbdwmc) "
-				+ "values(seq_zgfx_id.nextval,'"+bean.getName()+"','"+bean.getBz()+"','"+bean.getIsshow()+"','"+bean.getIspush()+"',to_date('"+bean.getYxsj()+"23:59:59','yyyy-mm-dd hh24:mi:ss'),'0','"+bean.getFileurl()+"','"+bean.getSbr()+"','"+bean.getSbdw()+"','"+bean.getSbdwmc()+"')";
-		return this.jdbcTemplate.update(sql);
+				+ "values(seq_zgfx_id.nextval,?,?,?,?," +
+				"to_date(?,'yyyy-mm-dd hh24:mi:ss'),'0',?,?,?,?)";
+		param.add(bean.getName());
+		param.add(bean.getBz());
+		param.add(bean.getIsshow());
+		param.add(bean.getIspush());
+		param.add(bean.getYxsj()+"23:59:59");
+		param.add(bean.getFileurl());
+		param.add(bean.getSbr());
+		param.add(bean.getSbdw());
+		param.add(bean.getSbdwmc());
+		return this.jdbcTemplate.update(sql,param.toArray());
 	}
 	
 	@Override
 	public int delete(String zgId) throws Exception {
-		String tmpSql = "update frm_zgfx set status=1 where id= '"+zgId+"'";
-		return this.jdbcTemplate.update(tmpSql);
+		String tmpSql = "update frm_zgfx set status=1 where id= ?";
+		return this.jdbcTemplate.update(tmpSql,new Object[]{zgId});
 		
 	}
 	
 	@Override
 	public int update(ZgfxBean bean) throws Exception {
-		String tmpSql = "update frm_zgfx set name='"+bean.getName()+"',bz='"+bean.getBz()+"',isshow='"+bean.getIsshow()+"',ispush='"+bean.getIspush()+"',yxsj=to_date('"+bean.getYxsj()+" 23:59:59','yyyy-mm-dd hh24:mi:ss'),fileurl='"+bean.getFileurl()+"',sbr='"+bean.getSbr()+"',sbdw='"+bean.getSbdw()+"',sbdwmc='"+bean.getSbdwmc()+"' where id= '"+bean.getId()+"'";
-		return this.jdbcTemplate.update(tmpSql);
+		List param = new ArrayList<>();
+		String tmpSql =
+				"update frm_zgfx set name=?,bz=?,isshow=?,ispush=?," +
+						"yxsj=to_date(?,'yyyy-mm-dd hh24:mi:ss'),fileurl=?," +
+						"sbr=?,sbdw=?,sbdwmc=? where id= ?";
+		param.add(bean.getName());
+		param.add(bean.getBz());
+		param.add(bean.getIsshow());
+		param.add(bean.getIspush());
+		param.add(bean.getYxsj()+"23:59:59");
+		param.add(bean.getFileurl());
+		param.add(bean.getSbr());
+		param.add(bean.getSbdw());
+		param.add(bean.getSbdwmc());
+		param.add(bean.getId());
+		return this.jdbcTemplate.update(tmpSql,param.toArray());
 		
 	}
 
 	@Override
 	public ZgfxBean getZgfx(String zgId) throws Exception {
-		String sb = "select id,name,bz,isshow,ispush,status,fileurl,to_char(yxsj,'yyyy-MM-dd') as yxsj,sbr,sbdw,sbdwmc from frm_zgfx where id='"+zgId+"'";
-		return this.queryForObject(sb, ZgfxBean.class);
+		String sb = "select id,name,bz,isshow,ispush,status,fileurl,to_char(yxsj,'yyyy-MM-dd') as" +
+				" yxsj,sbr,sbdw,sbdwmc from frm_zgfx where id=?";
+		return this.queryForObject(sb, new Object[]{zgId},ZgfxBean.class);
 	}
 	
 	/**
@@ -85,19 +123,24 @@ public class ZgfxDaoImpl extends BaseDaoImpl implements ZgfxDao {
 	public Map<String, Object> queryForShowPage(Map<String, Object> filter,
 			String title) throws Exception {
 		StringBuffer sb = new StringBuffer();
+		List param = new ArrayList<>();
 		sb.append("select id,name,bz,isshow,ispush,status,fileurl,sbr,sbdw,sbdwmc,to_char(yxsj,'yyyy-MM-dd') as yxsj from frm_zgfx ");
 		sb.append(" where 1=1　");
 		if(StringUtils.isNotBlank(title)){
-			sb.append(" and (name like '%").append(title).append("%'");
-			sb.append(" or bz like '%").append(title).append("%' ");
-			sb.append(" or sbr like '%").append(title).append("%' ");
-			sb.append(" or sbdwmc like '%").append(title).append("%' )");
+			sb.append(" and (name like ?");
+			param.add("%"+title+"%");
+			sb.append(" or bz like ? ");
+			param.add("%"+title+"%");
+			sb.append(" or sbr like ? ");
+			param.add("%"+title+"%");
+			sb.append(" or sbdwmc like ? )");
+			param.add("%"+title+"%");
 		}
 		sb.append(" and status = '0' ");//是否有效
 		sb.append(" and yxsj>sysdate ");//有效日期
 		sb.append(" order by id desc ");
 		
-		Map<String, Object> queryMap = this.findPageForMap(sb.toString(),
+		Map<String, Object> queryMap = this.findPageForMap(sb.toString(),param.toArray(),
 				Integer.parseInt(filter.get("curPage").toString()), 
 				Integer.parseInt(filter.get("pageSize").toString()));
 		

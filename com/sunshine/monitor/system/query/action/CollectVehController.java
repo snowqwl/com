@@ -125,7 +125,7 @@ public class CollectVehController {
 		try {
 			Page p = new Page(Integer.parseInt(page),Integer.parseInt(rows));
 			UserSession userSession = (UserSession) WebUtils.getSessionAttribute(request, "userSession");
-			String conSql = " and jh='"+userSession.getSysuser().getJh()+"'";
+			String conSql = userSession.getSysuser().getJh();
 			
 			result = this.collectVehManager.getCollectVehMapForFilter(p, info, conSql);
 		} catch (Exception e) {

@@ -37,6 +37,7 @@ public class HphmpassDaoImpl extends BaseDaoImpl implements HphmpassDao {
 		//索引策略 默认使用过车时间索引
 		OptimizeStrategy opt=new OptimizeStrategy("t");
 		String table ="";
+		List param = new ArrayList<>();
 	
 		if(condition.get("kdbh")!=null && !"".equals(condition.get("kdbh"))) {
 			/*if(opt.check()){
@@ -47,15 +48,18 @@ public class HphmpassDaoImpl extends BaseDaoImpl implements HphmpassDao {
 			if(opt.check()){
 				opt.setCode(3);
 			}
-			sql.append(" and kdbh = '").append(condition.get("kdbh")).append("' ");
+			sql.append(" and kdbh = ? ");
+			param.add(condition.get("kdbh"));
 		}
 		
 		if(StringUtils.isNotBlank((String)condition.get("kdbhlike"))){
-			sql.append(" and kdbh like '").append((String)condition.get("kdbhlike")).append("%'");
+			sql.append(" and kdbh like ?");
+			param.add((String) condition.get("kdbhlike") + "%");
 		}
 		
 		if(condition.get("fxbh")!=null && !"".equals(condition.get("fxbh"))) {
-			sql.append(" and fxbh = '").append(condition.get("fxbh")).append("' ");
+			sql.append(" and fxbh = ? ");
+			param.add(condition.get("fxbh"));
 		}
 		if(condition.get("licesenHeader")!=null && !"".equals(condition.get("licesenHeader"))) {
 			String[] licesenHeaders = condition.get("licesenHeader").toString().trim().split("\\p{Punct}");
@@ -63,7 +67,8 @@ public class HphmpassDaoImpl extends BaseDaoImpl implements HphmpassDao {
 				
 			sql.append("and ( ");
 			for (String licesenHeader : licesenHeaders) {
-				sql.append(" hphm like '" + licesenHeader + "%' or ");
+				sql.append(" hphm like ? or ");
+				param.add(licesenHeader+"%");
 			}
 			sql.delete(sql.length() - 3, sql.length());
 			sql.append(") ");
@@ -87,18 +92,22 @@ public class HphmpassDaoImpl extends BaseDaoImpl implements HphmpassDao {
 				}
 			}
 			
-			sql.append(" and hphm in(").append(hphmstr).append(") ");
+			sql.append(" and hphm in(?) ");
+			param.add(hphmstr);
 		}
 		if(condition.get("hpzl")!=null && !"".equals(condition.get("hpzl"))) {
-			sql.append(" and hpzl = '").append(condition.get("hpzl")).append("' ");
+			sql.append(" and hpzl = ? ");
+			param.add(condition.get("hpzl"));
 		}
 		if(condition.get("kssj")!=null && !"".equals(condition.get("kssj"))) {
 			sql.append(" and gcsj >= ").append(
-					"to_date('" + condition.get("kssj") + "','yyyy-mm-dd hh24:mi:ss')");
+					"to_date(?,'yyyy-mm-dd hh24:mi:ss')");
+			param.add(condition.get("kssj"));
 		}
 		if(condition.get("jssj")!=null && !"".equals(condition.get("jssj"))) {
 			sql.append(" and gcsj <= ").append(
-					"to_date('" + condition.get("jssj") + "','yyyy-mm-dd hh24:mi:ss')");
+					"to_date(?,'yyyy-mm-dd hh24:mi:ss')");
+			param.add(condition.get("jssj"));
 		}
 		
 		//String table = this.getTableName();
@@ -123,24 +132,26 @@ public class HphmpassDaoImpl extends BaseDaoImpl implements HphmpassDao {
 		//StringBuffer indexSql=new StringBuffer("select "+opt.algorithm()+"* from veh_passrec t where 1=1 "); 
 		sql=indexSql.append(sql);
 		Map map = null;
-		
+		Object[] array = param.toArray(new Object[param.size()]);
+
 		if (condition.get("cityname") == null
 				|| condition.get("cityname").toString().length() < 1) {
-		    
-			total = this.getTotalCount(sql);
+
+			total = this.getTotalCount(sql,array);
 			//map = this.getSelf().findPageForMap(sql.toString(), 1, 1, VehPassrec.class);
 		} else {
 			
 			///修改表名，应对应到各地市
 			JdbcTemplate jd =  SpringApplicationContext.getRemoteSourse(condition.get("cityname").toString().toUpperCase(), "jcbk", false);
-			map = this.getSelf().findPageForMapByJdbc(sql.toString(), 1, 10,VehPassrec.class, jd);
+			map = this.getSelf().findPageForMapByJdbc(sql.toString(),array,1, 10,VehPassrec.class,
+					jd);
 			total = Integer.parseInt(map.get("total").toString());
 		}
 		return total;
 	}
 	
 	
-    public int getTotalCount(StringBuffer sql) {
+    public int getTotalCount(StringBuffer sql,Object[] array) {
     	StringBuffer totalSQL = new StringBuffer(" SELECT count(1) FROM ( select /*+FIRST_ROWS*/*  from (");	
     	totalSQL.append(sql);
     	//添加红名单过滤
@@ -151,7 +162,7 @@ public class HphmpassDaoImpl extends BaseDaoImpl implements HphmpassDao {
     	try{
     		System.out.println("估计查询结果集是否超过1000---"+totalSQL.toString());
     		log.info("估计查询结果集是否超过1000---"+totalSQL.toString());
-    	    total=this.jdbcTemplate.queryForInt(totalSQL.toString());
+    	    total=this.jdbcTemplate.queryForInt(totalSQL.toString(),array);
     	 if(total!=0){
     		 return total;
     	 }

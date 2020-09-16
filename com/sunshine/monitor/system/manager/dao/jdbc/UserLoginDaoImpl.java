@@ -1,9 +1,6 @@
 package com.sunshine.monitor.system.manager.dao.jdbc;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.Map.Entry;
 
 import org.springframework.stereotype.Repository;
@@ -18,6 +15,7 @@ public class UserLoginDaoImpl extends BaseDaoImpl implements UserLoginDao {
 	public Map<String, Object> queryList(Map<String, Object> conditions)
 			throws Exception {
 		StringBuffer sql = new StringBuffer();
+		List param = new ArrayList<>();
 		sql.append(" select yhdh,yhmc,jh,glbm,bmmc ,nvl(count(yhdh2),0) as cs from (select  a.*,l.yhdh as yhdh2 from "+  
 				   " (select distinct f.yhdh, f.yhmc, f.jh, f.glbm ,d.bmmc from frm_sysuser f, jm_userrole j,frm_department d " +
 				   " where f.yhdh = j.yhdh and f.glbm = d.glbm) a "+
@@ -38,11 +36,10 @@ public class UserLoginDaoImpl extends BaseDaoImpl implements UserLoginDao {
 					sql.append(" = '").append(value).append("'");				
 			}
 		}
-		sql.append(" order by ");
-		sql.append(conditions.get("sort"));
-		sql.append(" ");
-		sql.append(conditions.get("order"));
-		Map<String, Object> map = this.findPageForMap(sql.toString(), Integer
+		sql.append(" order by ? ?");
+		param.add(conditions.get("sort"));
+		param.add(conditions.get("order"));
+		Map<String, Object> map = this.findPageForMap(sql.toString(), param.toArray(),Integer
 				.parseInt(conditions.get("page").toString()), Integer
 				.parseInt(conditions.get("rows").toString()));
 		return map;
@@ -52,6 +49,7 @@ public class UserLoginDaoImpl extends BaseDaoImpl implements UserLoginDao {
 			throws Exception {
 	
 		StringBuffer sql = new StringBuffer();
+		List param = new ArrayList<>();
 		sql.append(" select yhdh,yhmc,czsj,decode(czlx,'1001','普通登录','1003','PKI登录') as czlx,ip from( select a.*,l.czsj,l.czlx,l.ip from "+ 
                   " (select distinct f.yhdh, f.yhmc from frm_sysuser f, jm_userrole j where f.yhdh = j.yhdh ) a left join frm_log l "+
 				  " on czlx in ('1001', '1003') and l.yhdh = a.yhdh) where 1 = 1");
@@ -71,11 +69,10 @@ public class UserLoginDaoImpl extends BaseDaoImpl implements UserLoginDao {
 					sql.append(" = '").append(value).append("'");				
 			}
 		}
-		sql.append(" order by ");
-		sql.append(conditions.get("sort"));
-		sql.append(" ");
-		sql.append(conditions.get("order"));
-		Map<String, Object> map = this.findPageForMap(sql.toString(), Integer
+		sql.append(" order by ? ?");
+		param.add(conditions.get("sort"));
+		param.add(conditions.get("order"));
+		Map<String, Object> map = this.findPageForMap(sql.toString(), param.toArray(),Integer
 				.parseInt(conditions.get("page").toString()), Integer
 				.parseInt(conditions.get("rows").toString()));
 		return map;

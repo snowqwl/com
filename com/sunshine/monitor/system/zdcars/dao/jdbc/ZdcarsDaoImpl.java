@@ -19,43 +19,30 @@ public class ZdcarsDaoImpl extends BaseDaoImpl implements ZdcarsDao {
 
 	public Map<String, Object> saveZdCars(CarS car) throws Exception {
 		Map<String, Object> resultMap = new HashMap<String, Object>();
-		String sql ="insert into FW_CARS_API t values(" +
-				""+ArrayIdUtil.getId()+",'" +
-						""+car.getArrayId()+"" +
-						"','" +
-						""+car.getHphm()+"" +
-						"','" +
-						""+car.getHpzl()+"" +
-						"','" +
-						""+car.getHpzb()+"" +
-						"'," +
-						"to_date('"+car.getGcsj()+"','yyyy-mm-dd hh:mi:ss')" +
-						",'" +
-						""+car.getSbbh()+"" +
-						"','" +
-						""+car.getKkbh()+"" +
-						"','" +
-						""+car.getFxbh()+"" +
-						"','" +
-						""+car.getCdbh()+"" +
-						"','" +
-						""+car.getZpfx()+"" +
-						"','" +
-						""+car.getZbz()+"" +
-						"','" +
-						""+car.getPsly()+"" +
-						"','" +
-						""+car.getSbly()+"" +
-						"','" +
-						""+car.getZp1()+"" +
-						"','" +
-						""+car.getZp2()+"" +
-						"','" +
-						""+car.getZp3()+"" +
-						"','" +
-						""+car.getYxdj()+"" +
-						"',to_date('"+car.getXrsj()+"','yyyy-mm-dd hh:mi:ss'))";
-		int c = this.jdbcTemplate.update(sql);
+		List param = new ArrayList<>();
+		String sql ="insert into FW_CARS_API t values(?,?,?,?,?,to_date(?,'yyyy-mm-dd hh:mi:ss'),?,?,?,?,?,?,?,?,?,?,?,?,to_date(?,'yyyy-mm-dd hh:mi:ss'))";
+		param.add(ArrayIdUtil.getId());
+		param.add(car.getArrayId());
+		param.add(car.getHphm());
+		param.add(car.getHpzl());
+		param.add(car.getHpzb());
+		param.add(car.getGcsj());
+		param.add(car.getSbbh());
+		param.add(car.getKkbh());
+		param.add(car.getFxbh());
+		param.add(car.getCdbh());
+		param.add(car.getZpfx());
+		param.add(car.getZbz());
+		param.add(car.getPsly());
+		param.add(car.getSbly());
+		param.add(car.getZp1());
+		param.add(car.getZp2());
+		param.add(car.getZp3());
+		param.add(car.getYxdj());
+		param.add(car.getXrsj());
+
+		Object[] array = param.toArray(new Object[param.size()]);
+		int c = this.jdbcTemplate.update(sql,array);
 		if (c > 0) {
 			resultMap.put("code", "1");
 			resultMap.put("msg", "导入图像分析数据成功!");
@@ -70,8 +57,8 @@ public class ZdcarsDaoImpl extends BaseDaoImpl implements ZdcarsDao {
 			value= "%";
 		}
 		//String test = value==null||value.equals("")?"%":value ;
-		String sql = " select * from view_cars_result  where "+key+" like '%"+value+"%' ";
-		list = this.jdbcTemplate.queryForList(sql);
+		String sql = " select * from view_cars_result  where ? like ? ";
+		list = this.jdbcTemplate.queryForList(sql,key,new String[]{"%"+value+"%"});
 		
 		Map<String , Object> map=new HashMap<String,Object>();
 		/*String ars[] = sql.split("'");

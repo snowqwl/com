@@ -108,22 +108,28 @@ public abstract class DcBaseDaoImpl implements BaseDao, BeanSelfAware,
 	 */
 	public <T> T queryDetail(String tableName, String colName, String colValue,
 			Class<T> classz) throws Exception {
-		StringBuffer sqls = new StringBuffer(50);
-		sqls.append("SELECT * FROM ");
-		sqls.append(tableName);
-		sqls.append(" where ");
-		sqls.append(colName).append("=").append(colValue);
-		return queryObject(sqls.toString(), classz);
+//		StringBuffer sqls = new StringBuffer(50);
+//		sqls.append("SELECT * FROM ");
+//		sqls.append(tableName);
+//		sqls.append(" where ");
+//		sqls.append(colName).append("=").append(colValue);
+//		return queryObject(sqls.toString(), classz);
+		String sql = "SELECT * FROM ? where ? = ?";
+		return this.jdbcDcTemplate.queryForObject(sql, new JcbkRowMapper<T>(
+				classz),tableName,colName,colValue);
 	}
 
 	public <T> T queryDetail(String colValue) throws Exception {
-		StringBuffer sqls = new StringBuffer(50);
-		sqls.append("SELECT * FROM ");
-		sqls.append(this.tableName);
-		sqls.append(" where ");
-		sqls.append(this.pkName).append("=").append(colValue);
-		return queryObject(sqls.toString(), (Class<T>) Class
-				.forName(this.beanClassName));
+//		StringBuffer sqls = new StringBuffer(50);
+//		sqls.append("SELECT * FROM ");
+//		sqls.append(this.tableName);
+//		sqls.append(" where ");
+//		sqls.append(this.pkName).append("=").append(colValue);
+//		return queryObject(sqls.toString(), (Class<T>) Class
+//				.forName(this.beanClassName));
+		String sql = "SELECT * FROM ? where ? = ?";
+		return this.jdbcDcTemplate.queryForObject(sql, new JcbkRowMapper<T>(
+				(Class<T>) Class.forName(this.beanClassName)),this.tableName,this.pkName,colValue);
 	}
 
 	/**
@@ -199,6 +205,7 @@ public abstract class DcBaseDaoImpl implements BaseDao, BeanSelfAware,
 		totalSQL.append(") where rownum <= 500 ) totalTable ");
 		// 总记录数
 		int totalRows = jdbcDcTemplate.queryForInt(totalSQL.toString());
+
 		// 总页数
 		int totalPages;
 		if (pageSize != -1) {
@@ -225,20 +232,21 @@ public abstract class DcBaseDaoImpl implements BaseDao, BeanSelfAware,
 
 		// 构造oracle数据库的分页语句
 		StringBuffer cbo_sql = new StringBuffer(20);
-		cbo_sql.append(" /*+FIRST_ROWS(").append(pageSize).append(")*/ ");
+		cbo_sql.append(" /*+FIRST_ROWS(?)*/ ");
 		StringBuffer paginationSQL = new StringBuffer(" SELECT * FROM ( ");
 		paginationSQL.append(" SELECT ");
 		paginationSQL.append(cbo_sql.toString());
 		paginationSQL.append("temp.* ,ROWNUM num FROM ( ");
 		paginationSQL.append(sql);
 		if (pageSize != -1) {
-			paginationSQL.append("" + ") temp where ROWNUM <= " + lastIndex);
+			paginationSQL.append("" + ") temp where ROWNUM <= ?");
 		} else {
 			paginationSQL.append("" + ") temp ");
 		}
-		paginationSQL.append(" ) WHERE" + " num > " + startIndex);
+		paginationSQL.append(" ) WHERE" + " num > ?");
 
-		List list = jdbcDcTemplate.queryForList(paginationSQL.toString());
+		List list = jdbcDcTemplate.queryForList(paginationSQL.toString(),new Object[]{pageSize,
+				lastIndex,startIndex});
 
 		Map<String, Object> map = new HashMap<String, Object>();
 		// 设置总共有多少条记录
@@ -248,78 +256,7 @@ public abstract class DcBaseDaoImpl implements BaseDao, BeanSelfAware,
 
 		return map;
 	}
-	public Map<String, Object> findPageForMap(String sql, int curPage,
-			int pageSize,Object vl ) {
-		StringBuffer totalSQL = new StringBuffer(
-				" SELECT count(1) FROM ( select *  from (");
-		StringBuffer filterSql = new StringBuffer(20);
-		int pos = sql.toUpperCase().indexOf("ORDER");
-		if (pos != -1) {
-			String start = sql.substring(0, pos);
-			String t = sql.substring(pos, sql.length());
-			int p = t.indexOf(")");
-			if (p != -1) {
-				filterSql.append(start);
-				filterSql.append(t.substring(0, t.length()));
-			} else {
-				filterSql.append(start);
-			}
-			totalSQL.append(filterSql.toString());
-		} else {
-			totalSQL.append(sql);
-		}
-		totalSQL.append(") where rownum <= 500 ) totalTable ");
-		// 总记录数
-		int totalRows = jdbcDcTemplate.queryForInt(totalSQL.toString(),vl);
-		// 总页数
-		int totalPages;
-		if (pageSize != -1) {
-			if (totalRows % pageSize == 0) {
-				totalPages = totalRows / pageSize;
-			} else {
-				totalPages = (totalRows / pageSize) + 1;
-			}
-		} else {
-			totalPages = 1;
-		}
-		// 起始行数
-		int startIndex = (curPage - 1) * pageSize;
-		// 结束行数
-		int lastIndex = 0;
-		if (totalRows < pageSize) {
-			lastIndex = totalRows;
-		} else if ((totalRows % pageSize == 0)
-				|| (totalRows % pageSize != 0 && curPage < totalPages)) {
-			lastIndex = curPage * pageSize;
-		} else if (totalRows % pageSize != 0 && curPage == totalPages) {// 最后一页
-			lastIndex = totalRows;
-		}
 
-		// 构造oracle数据库的分页语句
-		StringBuffer cbo_sql = new StringBuffer(20);
-		cbo_sql.append(" /*+FIRST_ROWS(").append(pageSize).append(")*/ ");
-		StringBuffer paginationSQL = new StringBuffer(" SELECT * FROM ( ");
-		paginationSQL.append(" SELECT ");
-		paginationSQL.append(cbo_sql.toString());
-		paginationSQL.append("temp.* ,ROWNUM num FROM ( ");
-		paginationSQL.append(sql);
-		if (pageSize != -1) {
-			paginationSQL.append("" + ") temp where ROWNUM <= " + lastIndex);
-		} else {
-			paginationSQL.append("" + ") temp ");
-		}
-		paginationSQL.append(" ) WHERE" + " num > " + startIndex);
-
-		List list = jdbcDcTemplate.queryForList(paginationSQL.toString(),vl );
-
-		Map<String, Object> map = new HashMap<String, Object>();
-		// 设置总共有多少条记录
-		map.put("total", totalRows);
-		// 设置当前页的数据
-		map.put("rows", list);
-
-		return map;
-	}
 	public Map<String, Object> findPageForMap(String sql, int curPage,
 			int pageSize, Class<?> clazz) {
 		StringBuffer totalSQL = new StringBuffer(
@@ -369,20 +306,21 @@ public abstract class DcBaseDaoImpl implements BaseDao, BeanSelfAware,
 
 		// 构造oracle数据库的分页语句
 		StringBuffer cbo_sql = new StringBuffer(20);
-		cbo_sql.append(" /*+FIRST_ROWS(").append(pageSize).append(")*/ ");
+		cbo_sql.append(" /*+FIRST_ROWS(?)*/ ");
 		StringBuffer paginationSQL = new StringBuffer(" SELECT * FROM ( ");
 		paginationSQL.append(" SELECT ");
 		paginationSQL.append(cbo_sql.toString());
 		paginationSQL.append("temp.* ,ROWNUM num FROM ( ");
 		paginationSQL.append(sql);
 		if (pageSize != -1) {
-			paginationSQL.append("" + ") temp where ROWNUM <= " + lastIndex);
+			paginationSQL.append("" + ") temp where ROWNUM <= ?");
 		} else {
 			paginationSQL.append("" + ") temp ");
 		}
-		paginationSQL.append(" ) WHERE" + " num > " + startIndex);
+		paginationSQL.append(" ) WHERE" + " num > ?");
 
-		List list = this.queryForList(paginationSQL.toString(), clazz);
+		List list = this.jdbcDcTemplate.queryForList(paginationSQL.toString(), clazz,pageSize,
+				lastIndex,startIndex);
 
 		Map<String, Object> map = new HashMap<String, Object>();
 		// 设置总共有多少条记录
@@ -442,20 +380,21 @@ public abstract class DcBaseDaoImpl implements BaseDao, BeanSelfAware,
 
 		// 构造oracle数据库的分页语句
 		StringBuffer cbo_sql = new StringBuffer(20);
-		cbo_sql.append(" /*+FIRST_ROWS(").append(pageSize).append(")*/ ");
+		cbo_sql.append(" /*+FIRST_ROWS(?)*/ ");
 		StringBuffer paginationSQL = new StringBuffer(" SELECT * FROM ( ");
 		paginationSQL.append(" SELECT ");
 		paginationSQL.append(cbo_sql.toString());
 		paginationSQL.append("temp.* ,ROWNUM num FROM ( ");
 		paginationSQL.append(sql);
 		if (pageSize != -1) {
-			paginationSQL.append("" + ") temp where ROWNUM <= " + lastIndex);
+			paginationSQL.append("" + ") temp where ROWNUM <= ?");
 		} else {
 			paginationSQL.append("" + ") temp ");
 		}
-		paginationSQL.append(" ) WHERE" + " num > " + startIndex);
+		paginationSQL.append(" ) WHERE" + " num > ?");
 
-		List list = this.queryForList(paginationSQL.toString(), clazz);
+		List list = this.jdbcDcTemplate.queryForList(paginationSQL.toString(), clazz,pageSize,
+				lastIndex,startIndex);
 
 		Map<String, Object> map = new HashMap<String, Object>();
 		// 设置总共有多少条记录
@@ -524,21 +463,22 @@ public abstract class DcBaseDaoImpl implements BaseDao, BeanSelfAware,
 
 		// 构造oracle数据库的分页语句
 		StringBuffer cbo_sql = new StringBuffer(20);
-		cbo_sql.append(" /*+FIRST_ROWS(").append(pageSize).append(")*/ ");
+		cbo_sql.append(" /*+FIRST_ROWS(?)*/ ");
 		StringBuffer paginationSQL = new StringBuffer(" SELECT * FROM ( ");
 		paginationSQL.append(" SELECT ");
 		paginationSQL.append(cbo_sql.toString());
 		paginationSQL.append("temp.* ,ROWNUM num FROM ( ");
 		paginationSQL.append(sql);
 		if (pageSize != -1) {
-			paginationSQL.append("" + ") temp where ROWNUM <= " + lastIndex);
+			paginationSQL.append("" + ") temp where ROWNUM <= ?");
 		} else {
 			paginationSQL.append("" + ") temp ");
 		}
-		paginationSQL.append(" ) WHERE" + " num > " + startIndex);
+		paginationSQL.append(" ) WHERE" + " num > ?");
 
 		//List list = this.queryForList(paginationSQL.toString(), clazz);
-		List list = this.queryForList(jd,paginationSQL.toString(), clazz);
+		List list = this.jdbcDcTemplate.queryForList(paginationSQL.toString(), clazz,pageSize,
+				lastIndex,startIndex);
 
 		Map<String, Object> map = new HashMap<String, Object>();
 		// 设置总共有多少条记录
@@ -598,21 +538,22 @@ public abstract class DcBaseDaoImpl implements BaseDao, BeanSelfAware,
 
 		// 构造oracle数据库的分页语句
 		StringBuffer cbo_sql = new StringBuffer(20);
-		cbo_sql.append(" /*+FIRST_ROWS(").append(pageSize).append(")*/ ");
+		cbo_sql.append(" /*+FIRST_ROWS(?)*/ ");
 		StringBuffer paginationSQL = new StringBuffer(" SELECT * FROM ( ");
 		paginationSQL.append(" SELECT ");
 		paginationSQL.append(cbo_sql.toString());
 		paginationSQL.append("temp.* ,ROWNUM num FROM ( ");
 		paginationSQL.append(sql);
 		if (pageSize != -1) {
-			paginationSQL.append("" + ") temp where ROWNUM <= " + lastIndex);
+			paginationSQL.append("" + ") temp where ROWNUM <= ?");
 		} else {
 			paginationSQL.append("" + ") temp ");
 		}
-		paginationSQL.append(" ) WHERE" + " num > " + startIndex);
+		paginationSQL.append(" ) WHERE" + " num > ?");
 
 		//List list = this.queryForList(paginationSQL.toString(), clazz);
-		List list = this.queryForList(jd,paginationSQL.toString(), clazz);
+		List list = this.jdbcDcTemplate.queryForList(paginationSQL.toString(), clazz,pageSize,
+				lastIndex,startIndex);
 
 		Map<String, Object> map = new HashMap<String, Object>();
 		// 设置总共有多少条记录
@@ -661,7 +602,7 @@ public abstract class DcBaseDaoImpl implements BaseDao, BeanSelfAware,
 
 		// 构造oracle数据库的分页语句
 		StringBuffer cbo_sql = new StringBuffer(20);
-		cbo_sql.append(" /*+FIRST_ROWS(").append(pageSize).append(")*/ ");
+		cbo_sql.append(" /*+FIRST_ROWS(?)*/ ");
 
 		StringBuffer paginationSQL = new StringBuffer(" SELECT * FROM ( ");
 		paginationSQL.append(" SELECT ");
@@ -669,16 +610,17 @@ public abstract class DcBaseDaoImpl implements BaseDao, BeanSelfAware,
 		paginationSQL.append("temp.* ,ROWNUM num FROM ( ");
 		paginationSQL.append(sql);
 		if (pageSize != -1) {
-			paginationSQL.append("" + ") temp where ROWNUM <= " + lastIndex);
+			paginationSQL.append("" + ") temp where ROWNUM <= ?");
 		} else {
 			paginationSQL.append("" + ") temp ");
 		}
-		paginationSQL.append(" ) WHERE" + " num > " + startIndex);
+		paginationSQL.append(" ) WHERE" + " num > ?");
 
 		// System.out.println("分页:" + paginationSQL);
 
 		// long start = System.currentTimeMillis();
-		List<?> list = this.queryForList(paginationSQL.toString(), classz);
+		List<?> list = this.jdbcDcTemplate.queryForList(paginationSQL.toString(), classz,pageSize
+				,lastIndex,startIndex);
 		// long end = System.currentTimeMillis() ;
 		// System.out.println("分页(t):" + (end-start) + " ms");
 
@@ -720,7 +662,7 @@ public Map<String, Object> queryPageForMapByJdbc(String sql, int curPage, int pa
 
 		// 构造oracle数据库的分页语句
 		StringBuffer cbo_sql = new StringBuffer(20);
-		cbo_sql.append(" /*+FIRST_ROWS(").append(pageSize).append(")*/ ");
+		cbo_sql.append(" /*+FIRST_ROWS(?)*/ ");
 
 		StringBuffer paginationSQL = new StringBuffer(" SELECT * FROM ( ");
 		paginationSQL.append(" SELECT ");
@@ -728,13 +670,14 @@ public Map<String, Object> queryPageForMapByJdbc(String sql, int curPage, int pa
 		paginationSQL.append("temp.* ,ROWNUM num FROM ( ");
 		paginationSQL.append(sql);
 		if (pageSize != -1) {
-			paginationSQL.append("" + ") temp where ROWNUM <= " + lastIndex);
+			paginationSQL.append("" + ") temp where ROWNUM <= ?");
 		} else {
 			paginationSQL.append("" + ") temp ");
 		}
-		paginationSQL.append(" ) WHERE" + " num > " + startIndex);
+		paginationSQL.append(" ) WHERE" + " num > ?");
 
-		List<?> list = this.queryForList(jd, paginationSQL.toString(), classz);
+		List<?> list = this.jdbcDcTemplate.queryForList(paginationSQL.toString(), classz,pageSize
+				,lastIndex,startIndex);
 
 		Map<String, Object> map = new HashMap<String, Object>();
 		map.put("total", totalRows);
@@ -772,20 +715,21 @@ public Map<String, Object> queryPageForMapByJdbc(String sql, int curPage, int pa
 
 		// 构造oracle数据库的分页语句
 		StringBuffer cbo_sql = new StringBuffer(20);
-		cbo_sql.append(" /*+FIRST_ROWS(").append(pageSize).append(")*/ ");
+		cbo_sql.append(" /*+FIRST_ROWS(?)*/ ");
 		StringBuffer paginationSQL = new StringBuffer(" SELECT * FROM ( ");
 		paginationSQL.append(" SELECT ");
 		paginationSQL.append(cbo_sql.toString());
 		paginationSQL.append("temp.* ,ROWNUM num FROM ( ");
 		paginationSQL.append(sql);
 		if (pageSize != -1) {
-			paginationSQL.append("" + ") temp where ROWNUM <= " + lastIndex);
+			paginationSQL.append("" + ") temp where ROWNUM <= ?");
 		} else {
 			paginationSQL.append("" + ") temp ");
 		}
-		paginationSQL.append(" ) WHERE" + " num > " + startIndex);
+		paginationSQL.append(" ) WHERE" + " num > ?");
 
-		List<?> list = queryForList(paginationSQL.toString(), classz);
+		List<?> list = jdbcDcTemplate.queryForList(paginationSQL.toString(), classz,pageSize,
+				lastIndex,startIndex);
 
 		Map<String, Object> map = new HashMap<String, Object>();
 		// 设置总共有多少条记录
@@ -849,8 +793,7 @@ public Map<String, Object> queryPageForMapByJdbc(String sql, int curPage, int pa
 
 		// 构造oracle数据库的分页语句
 		StringBuffer cbo_sql = new StringBuffer(20);
-		cbo_sql.append(" /*+RULE && +first_rows(").append(pageSize).append(
-				")*/ ");
+		cbo_sql.append(" /*+RULE && +first_rows(?)*/ ");
 
 		StringBuffer paginationSQL = new StringBuffer(" SELECT * FROM ( ");
 		paginationSQL.append(" SELECT ");
@@ -858,16 +801,16 @@ public Map<String, Object> queryPageForMapByJdbc(String sql, int curPage, int pa
 		paginationSQL.append("temp.* ,ROWNUM num FROM ( ");
 		paginationSQL.append(sql);
 		if (pageSize != -1) {
-			paginationSQL.append("" + ") temp where ROWNUM <= " + lastIndex);
+			paginationSQL.append("" + ") temp where ROWNUM <= ?");
 		} else {
 			paginationSQL.append("" + ") temp ");
 		}
-		paginationSQL.append(" ) WHERE" + " num > " + startIndex);
+		paginationSQL.append(" ) WHERE" + " num > ?");
 
 		if (StringUtils.isNotBlank(orderStr)) {
 			paginationSQL.append("  order by ").append(orderStr).append("  ");
 		}
-		List list = jTemplate.queryForList(paginationSQL.toString());
+		List list = jTemplate.queryForList(paginationSQL.toString(),pageSize,lastIndex,startIndex);
 
 		Map<String, Object> map = new HashMap<String, Object>();
 		// 设置总共有多少条记录

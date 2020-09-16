@@ -120,12 +120,8 @@ public class ZykBaseDaoImpl implements ZykBaseDao {
 	public <T> T queryDetail(String tableName, String colName, String colValue,
 			Class<T> classz) throws Exception {
 		List<T> list = null;
-		StringBuffer sqls = new StringBuffer(50);
-		sqls.append("SELECT * FROM ");
-		sqls.append(tableName);
-		sqls.append(" where ");
-		sqls.append(colName).append("='").append(colValue).append("'");
-		list = this.queryForList(sqls.toString(),classz);
+		String sql = "SELECT * FROM ? where ? =?";
+		list = this.queryForList(sql,classz,tableName,colName,colValue);
 		if(list.size()>0){
 			return list.get(0);
 		}else{
@@ -134,13 +130,9 @@ public class ZykBaseDaoImpl implements ZykBaseDao {
 	}
 
 	public <T> T queryDetail(String colValue) throws Exception {
-		StringBuffer sqls = new StringBuffer(50);
-		sqls.append("SELECT * FROM ");
-		sqls.append(this.tableName);
-		sqls.append(" where ");
-		sqls.append(this.pkName).append("='").append(colValue).append("'");
-		return queryObject(sqls.toString(), (Class<T>) Class
-				.forName(this.beanClassName));
+		String sql = "SELECT * FROM ? where ?=?";
+		return queryObject(sql, (Class<T>) Class
+				.forName(this.beanClassName),this.tableName,this.pkName,colValue);
 	}
 
 	/**
@@ -150,6 +142,14 @@ public class ZykBaseDaoImpl implements ZykBaseDao {
 		long _1 = System.currentTimeMillis();
 		T t = this.jdbcZykTemplate.queryForObject(sql, new JcbkRowMapper<T>(
 				classz));
+		long _2 = System.currentTimeMillis();
+		log.debug("Query Object("+(_2-_1)+"ms)-->"+ sql);
+		return t;
+	}
+	public <T> T queryObject(String sql, Class<T> classz,Object ... params) throws Exception {
+		long _1 = System.currentTimeMillis();
+		T t = this.jdbcZykTemplate.queryForObject(sql, new JcbkRowMapper<T>(
+				classz),params);
 		long _2 = System.currentTimeMillis();
 		log.debug("Query Object("+(_2-_1)+"ms)-->"+ sql);
 		return t;
@@ -182,6 +182,10 @@ public class ZykBaseDaoImpl implements ZykBaseDao {
 		
 		return queryForList(jdbcZykTemplate, sql, classz);
 	}
+	public <T> List<T> queryForList(String sql, Class<T> classz,Object ... params) {
+
+		return queryForList(jdbcZykTemplate, sql, classz,params);
+	}
 	
 	/**
 	 * 根据SQL语句查询返回列表
@@ -213,6 +217,14 @@ public class ZykBaseDaoImpl implements ZykBaseDao {
 			Class<T> classz) {
 		long _1 = System.currentTimeMillis();
 		List<T> list = jTemplate.query(sql, new JcbkRowMapper<T>(classz));
+		long _2 = System.currentTimeMillis();
+		log.debug("Query List("+(_2-_1)+"ms)-->"+ sql);
+		return list;
+	}
+	public <T> List<T> queryForList(JdbcTemplate jTemplate, String sql,
+									Class<T> classz,Object ... params) {
+		long _1 = System.currentTimeMillis();
+		List<T> list = jTemplate.query(sql, new JcbkRowMapper<T>(classz),params);
 		long _2 = System.currentTimeMillis();
 		log.debug("Query List("+(_2-_1)+"ms)-->"+ sql);
 		return list;
@@ -523,14 +535,12 @@ public class ZykBaseDaoImpl implements ZykBaseDao {
 	}
 	
 	public int delete(String whereSql) throws Exception {
-		return this.jdbcZykTemplate.update("delete "+getTableName()+" where "+ whereSql);
+		return this.jdbcZykTemplate.update("delete ? where ?",getTableName(),whereSql);
 	}
 	
 	public int delete(String tabname,String colname,String colValue)throws Exception{
-		StringBuffer sb = new StringBuffer(" delete from ");
-		sb.append(tabname)
-		  .append(" where ").append(colname).append(" = ").append(colValue);
-		return this.jdbcZykTemplate.update(sb.toString());
+		String sql ="delete from ? where ? = ?";
+		return this.jdbcZykTemplate.update(sql,tabname,colname,colValue);
 	}
 	
 	public Map<String, Object> findPageForMapNoLimitByJdbc(String sql, int curPage,

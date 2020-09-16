@@ -1,5 +1,6 @@
 package com.sunshine.monitor.system.monitor.dao.jdbc;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -41,6 +42,7 @@ public class SjcsjcProjectDaoImpl extends BaseDaoImpl implements
 	 */
 	public List<Map<String, Object>> getSjcsQuery(String kssj, String jssj,
 			String jkdss) {
+		List param = new ArrayList<>();
 		List<Map<String, Object>> sjcsList = null;
 		/*
 		 * StringBuffer sb = new StringBuffer(
@@ -65,21 +67,25 @@ public class SjcsjcProjectDaoImpl extends BaseDaoImpl implements
 			String[] kdbh = jkdss.split(",");
 			sb.append(" Where kdbh in ( ");
 			for (int i = 0; i < kdbh.length; i++) {
-				if (i != (kdbh.length - 1))
-					sb.append("'").append(kdbh[i]).append("',");
-				else
-					sb.append("'").append(kdbh[i]).append("')");
+				if (i != (kdbh.length - 1)){
+					sb.append("?,");
+					param.add(kdbh[i]);
+				}
+				else{
+					sb.append("?)");
+					param.add(kdbh[i]);
+				}
+
 			}
 		}
 		sb
-				.append(") ab) cg left join (Select CSTR_COL01 as kdbh,CSTR_COL08 as fxbh,sum(nvl(to_number(CSTR_COL03), 0)) as ysc,sum(nvl(to_number(CSTR_COL06), 0)) ssmynzcsc,sum(nvl(to_number(CSTR_COL04), 0)) yfynzcsc,sum(nvl(to_number(CSTR_COL07), 0)) yscycs,sum(nvl(to_number(CSTR_COL05), 0)) sfynzcsc,case when sum(nvl(CSTR_COL03, 0)) = 0 then 0 else Round(sum(nvl(CSTR_COL06, 0)) / sum(nvl(CSTR_COL03, 0)),4) * 100 end ssmynzcscl,case when sum(nvl(CSTR_COL03, 0)) = 0 then 0 else Round(1 - sum(nvl(CSTR_COL06, 0)) / sum(nvl(CSTR_COL03, 0)),4) * 100 end ycscl from Monitor.T_MONITOR_JG_INTEGRATE_DETAIL Where KHFA_ID = '28' and DATE_COL01 >= to_date('");
-		sb.append(kssj).append(
-				"','yyyy-mm-dd hh24:mi:ss') and DATE_COL01 <= to_date('");
-		sb
-				.append(jssj)
-				.append(
-						"', 'yyyy-mm-dd hh24:mi:ss') group by CSTR_COL01, CSTR_COL08) bc on bc.kdbh = cg.kdbh and bc.fxbh = cg.fxbh");
-		sjcsList = this.jdbcTemplate.queryForList(sb.toString());
+				.append(") ab) cg left join (Select CSTR_COL01 as kdbh,CSTR_COL08 as fxbh,sum(nvl" +
+						"(to_number(CSTR_COL03), 0)) as ysc,sum(nvl(to_number(CSTR_COL06), 0)) " +
+						"ssmynzcsc,sum(nvl(to_number(CSTR_COL04), 0)) yfynzcsc,sum(nvl(to_number(CSTR_COL07), 0)) yscycs,sum(nvl(to_number(CSTR_COL05), 0)) sfynzcsc,case when sum(nvl(CSTR_COL03, 0)) = 0 then 0 else Round(sum(nvl(CSTR_COL06, 0)) / sum(nvl(CSTR_COL03, 0)),4) * 100 end ssmynzcscl,case when sum(nvl(CSTR_COL03, 0)) = 0 then 0 else Round(1 - sum(nvl(CSTR_COL06, 0)) / sum(nvl(CSTR_COL03, 0)),4) * 100 end ycscl from Monitor.T_MONITOR_JG_INTEGRATE_DETAIL Where KHFA_ID = '28' and DATE_COL01 >= to_date(?,'yyyy-mm-dd hh24:mi:ss') and DATE_COL01 <= to_date(?, 'yyyy-mm-dd hh24:mi:ss') group by CSTR_COL01, CSTR_COL08) bc on bc.kdbh = cg.k	dbh and bc.fxbh = cg.fxbh");
+		param.add(kssj);
+		param.add(jssj);
+
+		sjcsList = this.jdbcTemplate.queryForList(sb.toString(),param.toArray());
 		return sjcsList;
 	}
 
@@ -90,6 +96,7 @@ public class SjcsjcProjectDaoImpl extends BaseDaoImpl implements
 	 */
 	public List<Map<String, Object>> getSjcsQueryCd(String kssj, String jssj,
 			String jkdss, String fxbh) {
+		List param = new ArrayList<>();
 		List<Map<String, Object>> sjcsList = null;
 		StringBuffer sb = new StringBuffer(
 				"select cg.fxmc,nvl(bc.cdbh, '01') cdbh,nvl(ysc, 0) ysc, nvl(ssmynzcsc, 0) ssmynzcsc,nvl(nvl(ysc, 0) - nvl(ssmynzcsc, 0), 0) as ycsc,nvl(ssmynzcscl, 0) ssmynzcscl,nvl(ycscl, 0) ycscl from (Select ab.kdbh, ab.fxbh, ab.fxmc from (Select kdbh, fxbh, fxmc from code_gate_extend");
@@ -99,24 +106,29 @@ public class SjcsjcProjectDaoImpl extends BaseDaoImpl implements
 			String[] kdbh = jkdss.split(",");
 			sb.append(" Where kdbh in ( ");
 			for (int i = 0; i < kdbh.length; i++) {
-				if (i != (kdbh.length - 1))
-					sb.append("'").append(kdbh[i]).append("',");
-				else
-					sb.append("'").append(kdbh[i]).append("')");
+				if (i != (kdbh.length - 1)){
+					sb.append("?,");
+					param.add(kdbh[i]);
+				}
+
+				else{
+					sb.append("?)");
+					param.add(kdbh[i]);
+				}
+
 			}
 		}
 		if (fxbh != null) {
-			sb.append(" and fxbh = '").append(fxbh).append("'");
+			sb.append(" and fxbh = ?");
+			param.add(fxbh);
 		}
 		sb
-				.append(") ab) cg left join (Select CSTR_COL01 as kdbh,CSTR_COL08 as fxbh,CSTR_COL09 as cdbh, sum(nvl(to_number(CSTR_COL03), 0)) as ysc,sum(nvl(to_number(CSTR_COL06), 0)) ssmynzcsc,sum(nvl(to_number(CSTR_COL04), 0)) yfynzcsc,sum(nvl(to_number(CSTR_COL07), 0)) yscycs,sum(nvl(to_number(CSTR_COL05), 0)) sfynzcsc,case when sum(nvl(CSTR_COL03, 0)) = 0 then 0 else Round(sum(nvl(CSTR_COL06, 0)) / sum(nvl(CSTR_COL03, 0)),4) * 100 end ssmynzcscl,case when sum(nvl(CSTR_COL03, 0)) = 0 then 0 else Round(1 - sum(nvl(CSTR_COL06, 0)) / sum(nvl(CSTR_COL03, 0)),4) * 100 end ycscl from Monitor.T_MONITOR_JG_INTEGRATE_DETAIL Where KHFA_ID = '28' and DATE_COL01 >= to_date('");
-		sb.append(kssj).append(
-				"','yyyy-mm-dd hh24:mi:ss') and DATE_COL01 <= to_date('");
-		sb
-				.append(jssj)
-				.append(
-						"', 'yyyy-mm-dd hh24:mi:ss') group by CSTR_COL01, CSTR_COL08,CSTR_COL09) bc on bc.kdbh = cg.kdbh and bc.fxbh = cg.fxbh");
-		sjcsList = this.jdbcTemplate.queryForList(sb.toString());
+				.append(") ab) cg left join (Select CSTR_COL01 as kdbh,CSTR_COL08 as fxbh," +
+						"CSTR_COL09 as cdbh, sum(nvl(to_number(CSTR_COL03), 0)) as ysc,sum(nvl" +
+						"(to_number(CSTR_COL06), 0)) ssmynzcsc,sum(nvl(to_number(CSTR_COL04), 0)) yfynzcsc,sum(nvl(to_number(CSTR_COL07), 0)) yscycs,sum(nvl(to_number(CSTR_COL05), 0)) sfynzcsc,case when sum(nvl(CSTR_COL03, 0)) = 0 then 0 else Round(sum(nvl(CSTR_COL06, 0)) / sum(nvl(CSTR_COL03, 0)),4) * 100 end ssmynzcscl,case when sum(nvl(CSTR_COL03, 0)) = 0 then 0 else Round(1 - sum(nvl(CSTR_COL06, 0)) / sum(nvl(CSTR_COL03, 0)),4) * 100 end ycscl from Monitor.T_MONITOR_JG_INTEGRATE_DETAIL Where KHFA_ID = '28' and DATE_COL01 >= to_date(?,'yyyy-mm-dd hh24:mi:ss') and DATE_COL01 <= to_date(?, 'yyyy-mm-dd hh24:mi:ss') group by CSTR_COL01, CSTR_COL08,CSTR_COL09) bc on bc.kdbh = cg.kdbh and bc.fxbh = cg.fxbh");
+		param.add(kssj);
+		param.add(jssj);
+		sjcsList = this.jdbcTemplate.queryForList(sb.toString(),param.toArray());
 		return sjcsList;
 	}
 

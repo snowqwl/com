@@ -1,5 +1,6 @@
 package com.sunshine.monitor.comm.maintain.dao.jdbc;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -18,6 +19,7 @@ public class MaintainDaoImpl extends BaseDaoImpl implements MaintainDao {
 
 	public Map findMaintainForMap(Map filter,String bzlx)throws Exception {
 		StringBuffer sql = null;
+		List param = new ArrayList<>();
 		
 		if(bzlx != null && bzlx.equals("1")){
 			StringBuffer sb = new StringBuffer(" Select CSTR_COL02 as KDMC,CSTR_COL01 as KDBH, CSTR_COL03 as SBMC, PK1 as SBBH,to_char(DATE_COL01,'yyyy-mm-dd hh24:mi:ss') as GCSJ,CSTR_COL05 as zdcxsj");
@@ -33,13 +35,15 @@ public class MaintainDaoImpl extends BaseDaoImpl implements MaintainDao {
 			sql = new StringBuffer(" select * from jm_maintain_handle ");
 			
 			if(!"0".equals(bzlx)){
-				sql.append("   where gzlx = '").append(bzlx).append("' ");
+
+				sql.append("   where gzlx = ? ");
+				param.add(bzlx);
 			}
 			sql.append("  order by  gzsj ");
-			
 		}
+		Object[] array = param.toArray(new Object[param.size()]);
 		
-		return this.findPageForMap(sql.toString(), 
+		return this.findPageForMap(sql.toString(), array,
 				Integer.parseInt(filter.get("curPage").toString()), 
 				Integer.parseInt(filter.get("pageSize").toString()));
 	}
@@ -50,24 +54,29 @@ public class MaintainDaoImpl extends BaseDaoImpl implements MaintainDao {
 		StringBuffer sb = new StringBuffer(" update CODE_GATE_EXTEND  set bz1 = '")
 							.append(Common.getNow()).append("' ");
 		
-		sb.append(" where kdbh = '").append(kdbh).append("' ");
+		sb.append(" where kdbh = ? ");
 		
-		this.jdbcTemplate.update(sb.toString());
+		this.jdbcTemplate.update(sb.toString(),kdbh);
 	}
 	
 	public void setCodeGateState(String kdbh, String fxbh, String kkzt,
 			String sbzt) throws Exception {
 		List<CodeGateExtend> list = null;
+		List param = new ArrayList<>();
 		StringBuffer sb = new StringBuffer(
-				"update CODE_GATE_EXTEND set sbzt = ").append(sbzt).append(
-				" Where KDBH='").append(kdbh).append("' and FXBH='").append(
-				fxbh).append("'");
-		this.jdbcTemplate.update(sb.toString());
+				"update CODE_GATE_EXTEND set sbzt = ? Where KDBH=? and FXBH=?");
+		param.add(sbzt);
+		param.add(kdbh);
+		param.add(fxbh);
+		Object[] array = param.toArray(new Object[param.size()]);
+		this.jdbcTemplate.update(sb.toString(),array);
+
 		if (sbzt != null && sbzt.equals("1")) {
 			sb = new StringBuffer(
-					"Select * from CODE_GATE_EXTEND t Where KDBH='").append(
-					kdbh).append("'");
-			list = this.queryForList(sb.toString(), CodeGateExtend.class);
+					"Select * from CODE_GATE_EXTEND t Where KDBH='").append(kdbh).append("'");
+			param.add(kdbh);
+			Object[] array1 = param.toArray(new Object[param.size()]);
+			list = this.queryForList(sb.toString(), CodeGateExtend.class,array1);
 		}
 		boolean flag = true;
 		if (list != null) {
@@ -80,10 +89,9 @@ public class MaintainDaoImpl extends BaseDaoImpl implements MaintainDao {
 		}
 
 		if (flag) {
-			sb = new StringBuffer("Update CODE_GATE set kkzt = ")
-					.append(kkzt).append(" Where KDBH='").append(kdbh).append(
-							"'");
-			this.jdbcTemplate.update(sb.toString());
+			sb = new StringBuffer("Update CODE_GATE set kkzt = ? Where KDBH=?");
+
+			this.jdbcTemplate.update(sb.toString(),kkzt,kdbh);
 		}
 	}
 
@@ -93,21 +101,27 @@ public class MaintainDaoImpl extends BaseDaoImpl implements MaintainDao {
 		sb.append(" and a.kdbh=g.kdbh ")
 		  .append(" and g.dwdm in (select xjjg from frm_prefecture where dwdm = '").append(department.getGlbm()).append("')");
 		  */
+		List param = new ArrayList<>();
 		StringBuffer sb = new StringBuffer("select a.* from JM_MAINTAIN_HANDLE a where exists (select b.kdbh from CODE_GATE b where a.kdbh = b.kdbh ");
 		if(StringUtils.isNotBlank(handle.getKkbm())) {
-			sb.append(" and b.dwdm = '").append(handle.getKkbm()).append("')");
+			sb.append(" and b.dwdm = ?)");
+			param.add(handle.getKkbm());
 		} else {
-			sb.append("and exists (select c.xjjg from frm_prefecture c where c.dwdm = '").append(department.getGlbm()).append("' and b.dwdm = c.xjjg)) ");
+			sb.append("and exists (select c.xjjg from frm_prefecture c where c.dwdm = ? and b" +
+					".dwdm = c.xjjg)) ");
+			param.add(department.getGlbm());
 		}
 		if(StringUtils.isNotBlank(handle.getSfcl())){
-			sb.append("  and  sfcl = '").append(handle.getSfcl()).append("' ");
+			sb.append("  and  sfcl = ? ");
+			param.add(handle.getSfcl());
 		}
 		
 		/*else{
 			sb.append(" and  sfcl = '0' ");
 		}*/
 		if(StringUtils.isNotBlank(handle.getGzlx())){
-			sb.append("  and  gzlx = '").append(handle.getGzlx()).append("'  ");
+			sb.append("  and  gzlx = ?  ");
+			param.add(handle.getGzlx());
 		}
 		
 		if(StringUtils.isNotBlank(handle.getKssj())){
@@ -116,7 +130,8 @@ public class MaintainDaoImpl extends BaseDaoImpl implements MaintainDao {
 				reg += " hh24:mi:ss";
 			}
 			
-			sb.append("  and clsj >= to_date('").append(handle.getKssj()).append("','").append(reg).append("')  ");
+			sb.append("  and clsj >= to_date(?,'").append(reg).append("')  ");
+			param.add(handle.getKssj());
 		}
 		
 		if(StringUtils.isNotBlank(handle.getJssj())){
@@ -125,18 +140,20 @@ public class MaintainDaoImpl extends BaseDaoImpl implements MaintainDao {
 				reg += " hh24:mi:ss";
 			}
 			
-			sb.append("  and clsj <= to_date('").append(handle.getJssj()).append("','").append(reg).append("')  ");
+			sb.append("  and clsj <= to_date('?,'").append(reg).append("')  ");
+			param.add(handle.getJssj());
 		}
 		sb.append("  order by jcsj desc ");
-		return this.findPageForMap(sb.toString(), 
+		Object[] array = param.toArray(new Object[param.size()]);
+		return this.findPageForMap(sb.toString(), array,
 				Integer.parseInt(filter.get("curPage").toString()), 
 				Integer.parseInt(filter.get("pageSize").toString()));
 	}
 
 	public MaintainHandle getMaintainHandleForId(String id)throws Exception {
-		String sql = "select *  from jm_maintain_handle  where xh = '"+ id +"'";
+		String sql = "select *  from jm_maintain_handle  where xh = ?";
 		
-		List<MaintainHandle> list = this.queryForList(sql, MaintainHandle.class);
+		List<MaintainHandle> list = this.queryForList(sql,new Object[]{id}, MaintainHandle.class);
 		if(list != null && list.size() > 0 )
 			return list.get(0);
 		else
@@ -148,6 +165,7 @@ public class MaintainDaoImpl extends BaseDaoImpl implements MaintainDao {
 		StringBuffer sb  = null;
 		
 		String seqString="''";
+		List param = new ArrayList<>();
 		if(StringUtils.isBlank(handle.getXh())){
 			String seq="SELECT  SEQ_MAINTAINHANDLE_XH.NEXTVAL seq FROM dual ";
 			List seqlist=this.jdbcTemplate.queryForList(seq);
@@ -155,36 +173,44 @@ public class MaintainDaoImpl extends BaseDaoImpl implements MaintainDao {
 				Map map=(Map)seqlist.get(0);
 				seqString=map.get("seq").toString();
 			}
-			sb = new StringBuffer("insert into jm_maintain_handle(xh,gzlx,gzsj,gzqk,sbr,sbrmc,sbrdwdm,jcsj,ywdh,kdbh,fxbh)  values('"+seqString+"','");
-			sb.append(handle.getGzlx()).append("',to_date('").append(handle.getGzsj()).append("','yyyy-mm-dd hh24:mi:ss'),'")
-			.append(handle.getGzqk()).append("','").append(handle.getSbr()).append("','").append(handle.getSbrmc())
-			.append("','").append(handle.getSbrdwdm())
-			.append("',sysdate,'")
-			.append(""+handle.getYwdh()+"','")
-			.append(""+handle.getKdbh()+"','")
-			.append(""+handle.getFxbh()+"')");
+			sb = new StringBuffer("insert into jm_maintain_handle(xh,gzlx,gzsj,gzqk,sbr,sbrmc," +
+					"sbrdwdm,jcsj,ywdh,kdbh,fxbh)  values('"+seqString+"',?,to_date(?,'yyyy-mm-dd" +
+					" hh24:mi:ss'),?,?,?,?,sysdate,?,?,?)");
+			param.add(seqString);
+			param.add(handle.getGzlx());
+			param.add(handle.getGzsj());
+			param.add(handle.getGzqk());
+			param.add(handle.getSbr());
+			param.add(handle.getSbrmc());
+			param.add(handle.getSbrdwdm());
+			param.add(handle.getYwdh());
+			param.add(handle.getKdbh());
+			param.add(handle.getFxbh());
 		
 		}else{
-			sb = new StringBuffer(" update jm_maintain_handle set fksj = sysdate, clsj = to_date('");
-			sb.append(handle.getClsj()).append("','yyyy-mm-dd hh24:mi:ss'),clqk = '").append(handle.getClqk()).append("'  ");
-			sb.append(" ,fkr = '").append(handle.getSbr()).append("',fkrmc = '").append(handle.getSbrmc()).append("'  ");
-			sb.append(",fkrdwdm = '").append(handle.getFkrdwdm()).append("' ");
-			
+			sb = new StringBuffer(" update jm_maintain_handle set fksj = sysdate, clsj = to_date" +
+					"(?,'yyyy-mm-dd hh24:mi:ss'),clqk = ?,fkr = ?,fkrmc = ?,fkrdwdm = ?  ");
+			param.add(handle.getClsj());
+			param.add(handle.getClqk());
+			param.add(handle.getSbr());
+			param.add(handle.getSbrmc());
+			param.add(handle.getFkrdwdm());
 			if(StringUtils.isNotBlank(handle.getSfcl())){
-				sb.append(",sfcl = '").append(handle.getSfcl()).append("'  ");
+				sb.append(",sfcl = ?  ");
+				param.add(handle.getSfcl());
 			}
 			sb.append(" where xh = '").append(handle.getXh()).append("'  ");
 		}
-		this.jdbcTemplate.update(sb.toString());
+		Object[] array = param.toArray(new Object[param.size()]);
+		this.jdbcTemplate.update(sb.toString(),array);
 		return seqString;
 	}
 	
 	
 	public int saveDxsj(String value,String values)
 	throws Exception {
-		String sql ="insert into frm_communication("+value+") values ("+values+")" 
-			;
-		return this.jdbcTemplate.update(sql);
+		String sql ="insert into frm_communication(?) values (?)";
+		return this.jdbcTemplate.update(sql,value,values);
 	}
 	
 	public List<CodeGateExtend> getGzCodeGateInfo() throws Exception {

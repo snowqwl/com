@@ -16,9 +16,8 @@ public class UserDaoImpl extends BaseDaoImpl implements UserDao {
 	private Logger logger = LoggerFactory.getLogger(UserDaoImpl.class);
 
 	public User queryUser(String userName, String password) throws Exception {
-		String sql = "select * from user_temp where userName = " + userName
-				+ " and password = " + password;
-		return this.queryObject(sql, User.class);
+		String sql = "select * from user_temp where userName = ? and password = ?";
+		return this.queryObject(sql, User.class,userName,password);
 	}
 
 	public List<User> findUserList() throws Exception {

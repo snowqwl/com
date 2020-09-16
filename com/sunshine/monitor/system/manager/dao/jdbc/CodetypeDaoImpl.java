@@ -1,5 +1,6 @@
 package com.sunshine.monitor.system.manager.dao.jdbc;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -24,61 +25,87 @@ public class CodetypeDaoImpl extends BaseDaoImpl implements CodetypeDao {
 
 	public List<Codetype> getCodetypes(Codetype codetype) throws Exception {
 		String tmpSql = "";
+		List param = new ArrayList<>();
 		if ((codetype.getDmlb() != null) && (!codetype.getDmlb().equals(""))) {
-			tmpSql = " Where dmlb like '" + codetype.getDmlb() + "%'";
+			tmpSql = " Where dmlb like ?";
+			param.add(codetype.getDmlb()+"%");
 		}
 		if ((codetype.getLbsm() != null) && (!codetype.equals(""))) {
 			if (tmpSql != "") {
-				tmpSql = tmpSql + "and lbsm like '%" + codetype.getLbsm() + "%'";
+				tmpSql = tmpSql + "and lbsm like ?";
+				param.add("%" + codetype.getLbsm() + "%");
 			} else {
-				tmpSql = " Where lbsm like '%" + codetype.getLbsm() + "%'";
+				tmpSql = " Where lbsm like ?";
+				param.add("%" + codetype.getLbsm() + "%");
 			}
 		}
 		tmpSql = "Select * from frm_codetype " + tmpSql + "order by dmlb";
-		List<Codetype> list = this.jdbcTemplate.queryForList(tmpSql, Codetype.class);
+		
+		List<Codetype> list = this.jdbcTemplate.queryForList(tmpSql, param.toArray(),
+				Codetype.class);
 		return list;
 	}
 
 	public Map<String,Object> getCodetypesByPageSize(Map filter,Codetype codetype)
 			throws Exception {
 		String tmpSql = "";
+		List param = new ArrayList<>();
 		if (codetype.getDmlb() != null && !codetype.equals("")) {
-			tmpSql = " Where dmlb like '%" + codetype.getDmlb() + "%'";
+			tmpSql = " Where dmlb like ?";
+			param.add("%"+codetype.getDmlb()+"%");
 		} 
 		if ((codetype.getLbsm() != null) && (!codetype.getLbsm().equals(""))) {
 			if (tmpSql != "") {
-				tmpSql = tmpSql + "and lbsm like '%" + codetype.getLbsm() 
-				          + "%'";
+				tmpSql = tmpSql + "and lbsm like ?";
+				param.add("%"+codetype.getLbsm()+"%");
 			} else {
-				tmpSql = " Where lbsm like '%" + codetype.getLbsm() + "%'";
+				tmpSql = " Where lbsm like ?";
+				param.add("%"+codetype.getLbsm()+"%");
 			}
 		}
 		tmpSql = "Select * from frm_codetype " + tmpSql + " order by dmlb";
 		
-		Map<String,Object> map = this.findPageForMap(tmpSql, 
+		Map<String,Object> map = this.findPageForMap(tmpSql, param.toArray(),
 				Integer.parseInt(filter.get("curPage").toString()), 
 				Integer.parseInt(filter.get("pageSize").toString()));
 	   return map;
 	}
 
 	public int removeCodetype(Codetype codetype) throws Exception {
-		String tmpSql = "Delete frm_codetype Where dmlb='" + codetype.getDmlb() + "'";
-		return this.jdbcTemplate.update(tmpSql);
+		String tmpSql = "Delete frm_codetype Where dmlb=?";
+		
+		return this.jdbcTemplate.update(tmpSql,codetype.getDmlb());
 		
 	}
 
 	public int saveCodetype(Codetype codetype) throws Exception {
-		String sql = "Select count(*) icount from frm_codetype Where dmlb='" + codetype.getDmlb() + "'";
+		List v1 = new ArrayList<>();
+		String sql = "Select count(*) icount from frm_codetype Where dmlb=?";
+		v1.add(codetype.getDmlb());
+
 		String tmpSql = "";
-		int count = this.jdbcTemplate.queryForInt(sql);
+		int count = this.jdbcTemplate.queryForInt(sql,v1.toArray());
+		List param = new ArrayList<>();
+
 		if (count > 0) {
-			tmpSql = "Update frm_codetype set LBSM='"+ codetype.getLbsm()+  "',DMCD='" + codetype.getDmcd() + "',LBSX='" + codetype.getLbsx() + 
-			"', LBBZ='" + codetype.getLbbz() + "',BZ='" + codetype.getBz() + "' Where DMLB='" + codetype.getDmlb() +  "'";
+			tmpSql =
+					"Update frm_codetype set LBSM=?,DMCD=?,LBSX=?, LBBZ=?,BZ=? Where DMLB=?";
+			param.add(codetype.getLbsm());
+			param.add(codetype.getDmcd());
+			param.add(codetype.getLbsx());
+			param.add(codetype.getLbbz());
+			param.add(codetype.getBz());
+			param.add(codetype.getDmlb());
 		} else {
-			tmpSql = "Insert Into frm_codetype(DMLB,LBSM,DMCD,LBSX,LBBZ,BZ) values('" + codetype.getDmlb() + "','" + codetype.getLbsm() + "'," +
-					"'" + codetype.getDmcd() + "','" + codetype.getLbsx() + "','" + codetype.getLbbz() + "','" + codetype.getBz() + "')";
+			tmpSql = "Insert Into frm_codetype(DMLB,LBSM,DMCD,LBSX,LBBZ,BZ) values(?,?,?,?,?,?)";
+			param.add(codetype.getDmlb());
+			param.add(codetype.getLbsm());
+			param.add(codetype.getDmcd());
+			param.add(codetype.getLbsx());
+			param.add(codetype.getLbbz());
+			param.add(codetype.getBz());
 		}
-		return this.jdbcTemplate.update(tmpSql);
+		return this.jdbcTemplate.update(tmpSql,param.toArray());
 	}
 
 }

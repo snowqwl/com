@@ -16,8 +16,8 @@ public class RoleMenuDaoImpl extends BaseDaoImpl implements RoleMenuDao {
 	private Logger log = LoggerFactory.getLogger(RoleMenuDaoImpl.class);
 
 	public RoleMenu getRoleMenu(RoleMenu roleMenu) throws Exception{
-		String sql = "SELECT /*+FIRST_ROWS(1)*/ JSDH,CXDH,PARENTID FROM JM_ROLEMENU  WHERE JSDH='" + roleMenu.getJsdh() + "' AND CXDH= '" + roleMenu.getCxdh()+"'";
-		List<RoleMenu> list = this.queryList(sql, RoleMenu.class);
+		String sql = "SELECT /*+FIRST_ROWS(1)*/ JSDH,CXDH,PARENTID FROM JM_ROLEMENU  WHERE JSDH=? AND CXDH= ?";
+		List<RoleMenu> list = this.queryList(sql, RoleMenu.class,roleMenu.getJsdh(),roleMenu.getCxdh());
 		if(list.size()==0){
 			return null ;
 		}
@@ -25,18 +25,23 @@ public class RoleMenuDaoImpl extends BaseDaoImpl implements RoleMenuDao {
 	}
 	
 	public boolean batchInsertRoleMenu(List<RoleMenu> list) throws Exception{
-		boolean flag = true ;
+		boolean flag = true;
 		List<String> executeSql = new ArrayList<String>();
+
+		String sql="INSERT INTO JM_ROLEMENU VALUES(?,?,?)" ;
+		List param = new ArrayList<>();
 		for (RoleMenu roleMenu : list) {
 			RoleMenu rm = getRoleMenu(roleMenu);
 			if(rm == null){
-				executeSql.add("INSERT INTO JM_ROLEMENU VALUES("+roleMenu.getJsdh()+","+roleMenu.getCxdh()+","+roleMenu.getParentid()+")") ;
+				param.add(roleMenu.getJsdh());
+				param.add(roleMenu.getCxdh());
+				param.add(roleMenu.getParentid());
 			}
 		}
 		if(executeSql.size()<=0){
 			return false ;
 		}
-		int[] result = this.jdbcTemplate.batchUpdate(executeSql.toArray(new String[]{}));
+		int[] result = this.jdbcTemplate.batchUpdate(sql,param);
 		for (int j = 0; j < result.length; j++) {
 			if(result[j]<0){
 				// 第i+1条数据执行失败，只要有一条数据执行失败，则结果为失败
@@ -57,8 +62,9 @@ public class RoleMenuDaoImpl extends BaseDaoImpl implements RoleMenuDao {
 	
 	public List<RoleMenu> queryParenRoleMenu(RoleMenu roleMenu)
 			throws Exception {
-		String sql = "SELECT JSDH,CXDH,PARENTID FROM JM_ROLEMENU  WHERE JSDH='" + roleMenu.getJsdh() + "' AND PARENTID= '" + roleMenu.getCxdh()+"'";
-		List<RoleMenu> list = this.queryList(sql, RoleMenu.class);
+		String sql =
+				"SELECT JSDH,CXDH,PARENTID FROM JM_ROLEMENU  WHERE JSDH=? AND PARENTID= ?";
+		List<RoleMenu> list = this.queryList(sql, RoleMenu.class,roleMenu.getJsdh(),roleMenu.getCxdh());
 		return list;
 	}
 

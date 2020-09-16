@@ -95,9 +95,10 @@ public class ScsBaseDaoImpl implements ScsBaseDao{
 			int pageSize) throws Exception {
 		StringBuffer sb = new StringBuffer();
 		int start = (curPage - 1) * pageSize;
-		sb.append(sql).append(" limit ").append(pageSize).append(" offset ").append(start);
+		sb.append(sql).append(" limit ? offset ?");
 		long pstart = System.currentTimeMillis();
-		List<Map<String, Object>> list = this.jdbcScsTemplate.queryForList(sb.toString());
+		List<Map<String, Object>> list = this.jdbcScsTemplate.queryForList(sb.toString(),
+				new Object[]{pageSize,start});
 		long pend = System.currentTimeMillis();
 		log.info("sqlPage-(" + (pend-pstart) + "毫秒)" +sb.toString());
 		return list;
@@ -108,10 +109,11 @@ public class ScsBaseDaoImpl implements ScsBaseDao{
 			Class<T> clazz) throws Exception {
 		StringBuffer sb = new StringBuffer();
 		int start = (curPage - 1) * pageSize;
-		sb.append(sql).append(" limit ").append(pageSize).append(" offset ").append(start);
+		sb.append(sql).append(" limit ? offset ?");
 		long pstart = System.currentTimeMillis();
 		//List<Map<String, Object>> list = this.jdbcScsTemplate.queryForList(sb.toString());
-		List<T> list = this.jdbcScsTemplate.query(sb.toString(), new BeanPropertyRowMapper<T>(clazz));
+		List<T> list = this.jdbcScsTemplate.query(sb.toString(),
+				new BeanPropertyRowMapper<T>(clazz),new Object[]{pageSize,start});
 		long pend = System.currentTimeMillis();
 		log.info("sqlPage-(" + (pend-pstart) + "毫秒)" +sb.toString());
 		return list;
@@ -153,6 +155,25 @@ public class ScsBaseDaoImpl implements ScsBaseDao{
 		long pstart = System.currentTimeMillis();
 		List<Map<String, Object>> list = this.jdbcScsTemplate.queryForList(sb
 				.toString());
+		long pend = System.currentTimeMillis();
+		log.info("sqlPage-(" + (pend-pstart) + "毫秒)" +sb.toString());
+		// 设置总共有多少条记录
+		map.put("total", total);
+		// 设置当前页的数据
+		map.put("rows", list);
+
+		return map;
+	}
+	public Map<String, Object> findPageForMap(String sql, Object[] array,int curPage,
+											  int pageSize) {
+		Map<String, Object> map = new HashMap<String, Object>();
+		StringBuffer sb = new StringBuffer();
+		int total = getCount(sql);
+		int start = (curPage - 1) * pageSize;
+		sb.append(sql).append(" limit ").append(pageSize).append(" offset ").append(start);
+		long pstart = System.currentTimeMillis();
+		List<Map<String, Object>> list = this.jdbcScsTemplate.queryForList(sb
+				.toString(),array);
 		long pend = System.currentTimeMillis();
 		log.info("sqlPage-(" + (pend-pstart) + "毫秒)" +sb.toString());
 		// 设置总共有多少条记录
@@ -281,7 +302,7 @@ public class ScsBaseDaoImpl implements ScsBaseDao{
 	}
 	
 	public int createTemp(String sql,String tablename) throws Exception {
-		this.jdbcScsTemplate.update("DROP TABLE IF EXISTS "+tablename);
+		this.jdbcScsTemplate.update("DROP TABLE IF EXISTS ?",tablename);
 
 		StringBuffer sb = new StringBuffer(" create table ");
 		sb.append(tablename).append("").append(sql);
@@ -289,7 +310,7 @@ public class ScsBaseDaoImpl implements ScsBaseDao{
 	}
 
 	public int dropTable(String tablename) throws Exception {
-		return this.jdbcScsTemplate.update("DROP TABLE IF EXISTS "+tablename);
+		return this.jdbcScsTemplate.update("DROP TABLE IF EXISTS ?",tablename);
 	}
 	
 	public <T> List<T> query(String tableName,Class<T> clazz, Cnd cnd, Pager pager)

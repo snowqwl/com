@@ -1,10 +1,7 @@
 package com.sunshine.monitor.system.monitor.dao.jdbc;
 
-import java.util.HashMap;
+import java.util.*;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
 
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Repository;
@@ -20,16 +17,19 @@ public class GateProjectDaoImpl extends BaseDaoImpl implements GateProjectDao {
 	public Map<String, Object> findGateProjectForMap(Map filter,
 			GateProject project) throws DataAccessException {
 		String sql = "";
+		List param = new ArrayList<>();
 		if ((project.getRq() != null) && (project.getRq().length() > 0)) {
-			sql += " and a.rq = '" + project.getRq() + "'";
+			sql += " and a.rq = ?";
+			param.add(project.getRq());
 		}
 		if ((project.getDwdm() != null) && (project.getDwdm().length() > 0)) {
-			sql += " and a.dwdm ='" + project.getDwdm() + "'";
+			sql += " and a.dwdm =?";
+			param.add(project.getDwdm());
 		}
 		sql = "select a.rq,a.dwdm,b.jdmc dwdmmc,a.ghjrs,a.sjjrs from JM_GATE_PROJECT a,code_url b " +
 				"where a.dwdm=b.dwdm " + sql + " order by a.inputtime desc";
 		if(filter == null) {
-			List list= this.jdbcTemplate.queryForList(sql);
+			List list= this.jdbcTemplate.queryForList(sql,param.toArray());
 			Map<String,Object> resultMap = new HashMap<String,Object>();
 			resultMap.put("rows", list);
 			resultMap.put("total", 0);
@@ -43,9 +43,12 @@ public class GateProjectDaoImpl extends BaseDaoImpl implements GateProjectDao {
 	}
 
 	public GateProject getGateProject(String rq, String dwdm) {
+		List param = new ArrayList<>();
 		String sql = "select a.rq,a.dwdm,b.jdmc dwdmmc,a.ghjrs,a.sjjrs,a.inputtime from JM_GATE_PROJECT a,code_url b " +
 				"where a.rq='" + rq + "' and a.dwdm='"+dwdm+"' and a.dwdm=b.dwdm";
-		List<GateProject> list = this.queryForList(sql, GateProject.class);
+		param.add(rq);
+		param.add(dwdm);
+		List<GateProject> list = this.queryForList(sql, param.toArray(),GateProject.class);
 		if(list.size() > 0)
 			return (GateProject)list.get(0);
 		else
@@ -59,37 +62,54 @@ public class GateProjectDaoImpl extends BaseDaoImpl implements GateProjectDao {
 
 	public List<GateProject> getGateProjectsByrq(String rq)
 			throws DataAccessException {
+		List param = new ArrayList<>();
 		String sql = "select * from JM_GATE_PROJECT where rq='" + rq + "'";
-		return this.queryForList(sql, GateProject.class);
+		param.add(rq);
+
+		return this.queryForList(sql, param.toArray(),GateProject.class);
 	}
 
 	public boolean saveGateProject(GateProject bean)
 			throws DataAccessException {
+		List param = new ArrayList<>();
 		String sql ="" ;
 		SimpleDateFormat sdf =new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		sql = "select * from JM_GATE_PROJECT where rq='"+bean.getRq()+"' and dwdm='"+bean.getDwdm()+"'";
-		List<GateProject> list = this.queryForList(sql, GateProject.class);
+		sql = "select * from JM_GATE_PROJECT where rq=? and dwdm=?";
+		param.add(bean.getRq());
+		param.add(bean.getDwdm());
+		List<GateProject> list = this.queryForList(sql, param.toArray(),GateProject.class);
 		if(list.size()>0){
-			sql = "update JM_GATE_PROJECT set ghjrs="+bean.getGhjrs() +" ,inputtime=to_date('"+sdf.format(new Date())+"','yyyy-mm-dd hh24:mi:ss')"
-				+" where rq='"+bean.getRq()+"' and dwdm='"+bean.getDwdm()+"'";
+			sql =
+					"update JM_GATE_PROJECT set ghjrs=? ,inputtime=to_date(?,'yyyy-mm-dd " +
+							"hh24:mi:ss')"
+				+" where rq=? and dwdm=?";
+			param.add(bean.getGhjrs());
+			param.add(sdf.format(new Date()));
+			param.add(bean.getRq());
+			param.add(bean.getDwdm());
 		}else {
-			sql = "insert into JM_GATE_PROJECT(rq, dwdm, ghjrs) values('"+bean.getRq()+"','"+bean.getDwdm()
-				+"','"+bean.getGhjrs()+"')";
+			sql = "insert into JM_GATE_PROJECT(rq, dwdm, ghjrs) values(?,?,?)";
+			param.add(bean.getRq());
+			param.add(bean.getDwdm());
+			param.add(bean.getGhjrs());
 		}
-		return this.jdbcTemplate.update(sql)>0?true:false;
+		return this.jdbcTemplate.update(sql,param.toArray())>0?true:false;
 	}
 
 	public boolean batchDeleteProject(String[] rqhs)
 			throws DataAccessException {
 		
 		boolean flag = true ;
-		String[] sqlArray = new String[rqhs.length];
+		List param = new ArrayList<>();
+
 		int i = 0 ;
+		StringBuffer sb = new StringBuffer();
 		for (String rq : rqhs) {
-			sqlArray[i]="DELETE FROM JM_GATE_PROJECT WHERE RQ = " + rq;
+			sb.append("DELETE FROM JM_GATE_PROJECT WHERE RQ = ?");
+			param.add(rq);
 			i = i + 1 ;
 		}
-		int[] result = this.jdbcTemplate.batchUpdate(sqlArray);
+		int[] result = this.jdbcTemplate.batchUpdate(sb.toString(),param);
 		for (int j = 0; i < result.length; j++) {
 			if(result[j]<0){
 				// 第i+1条数据执行失败，只要有一条数据执行失败，则结果为失败
@@ -120,15 +140,23 @@ public class GateProjectDaoImpl extends BaseDaoImpl implements GateProjectDao {
 	}
 	
 	public List getGateInfoByCity(String glbm) throws Exception {
+		List param = new ArrayList<>();
 		String sql= ""
 		+"	select * from "
-		+"	(select count(1) TOTAL from code_gate where kdbh like '"+glbm+"%' ) c1 ,  "
-		+"	        (select count(1) ON_LINE from code_gate where kkzt='1' and kdbh like '"+glbm+"%' ) c2 ,"
-		+"	        (select count(1) BREAK from code_gate where kkzt='2' and kdbh like '"+glbm+"%' ) c3 ,"
-		+"	        (select count(1) FIX from code_gate where kkzt='3' and kdbh like '"+glbm+"%' ) c4 "
+		+"	(select count(1) TOTAL from code_gate where kdbh like ? ) c1 ,  "
+		+"	        (select count(1) ON_LINE from code_gate where kkzt='1' and kdbh like ? ) c2 ,"
+		+"	        (select count(1) BREAK from code_gate where kkzt='2' and kdbh like ? ) c3 ,"
+		+"	        (select count(1) FIX from code_gate where kkzt='3' and kdbh like ? ) c4 "
 		;
+		param.add(glbm+"%");
+		param.add(glbm+"%");
+		param.add(glbm+"%");
+		param.add(glbm+"%");
+
+
+
 		
-		return this.jdbcTemplate.queryForList(sql);
+		return this.jdbcTemplate.queryForList(sql,param.toArray());
 		}
 	
 	
@@ -138,14 +166,18 @@ public class GateProjectDaoImpl extends BaseDaoImpl implements GateProjectDao {
 			+" where jb='3' "
 			;
 		List list=this.jdbcTemplate.queryForList(sql);
+		List param = new ArrayList<>();
 		for(int i=0;i<list.size();i++){
 			Map map=(Map)list.get(i);
 			//统计接入情况sql
 			String connectSql=" select * from "
-				+" (select count(1) TOTAL from code_gate where kdbh like '"+map.get("DWDM")+"%' ) c1 ,"
-				+"  (select count(1) ON_LINE from code_gate where kkzt='1' and kdbh like '"+map.get("DWDM")+"%' ) c2"
+				+" (select count(1) TOTAL from code_gate where kdbh like ? ) c1 ,"
+				+"  (select count(1) ON_LINE from code_gate where kkzt='1' and kdbh like ? ) c2"
 				;
-			List connectList=this.jdbcTemplate.queryForList(connectSql);
+			param.add(map.get("DWDM")+"%");
+			param.add(map.get("DWDM")+"%");
+			List connectList=this.jdbcTemplate.queryForList(connectSql,param.toArray());
+
 			if(connectList.size()>0){
 				Map connectMap=(Map)connectList.get(0);
 				if(!connectMap.get("TOTAL").equals("0")){

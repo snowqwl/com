@@ -18,53 +18,70 @@ import com.sunshine.monitor.system.susp.dao.SuspinfoEditDao;
 public class SuspEditDaoImpl extends BaseDaoImpl implements SuspinfoEditDao {
 
 	public Map findSuspinfoForMap(Map map, VehSuspinfo info) throws Exception {
+		List param = new ArrayList<>();
 		StringBuffer sb = new StringBuffer();
-		if (StringUtils.isNotBlank(info.getBkdl()))
-			sb.append(" and BKDL = '").append(info.getBkdl()).append("' ");
+		if (StringUtils.isNotBlank(info.getBkdl())) {
+			sb.append(" and BKDL = ? ");
+			param.add(info.getBkdl());
+		}
 
-		if (StringUtils.isNotBlank(info.getBklb()))
-			sb.append(" and BKLB = '").append(info.getBklb()).append("' ");
+		if (StringUtils.isNotBlank(info.getBklb())){
+			sb.append(" and BKLB = ? ");
+			param.add(info.getBklb());
+		}
 
-		if (StringUtils.isNotBlank(info.getHphm()))
-			sb.append(" and hphm like '%").append(info.getHphm()).append("%' ");
+		if (StringUtils.isNotBlank(info.getHphm())) {
+			sb.append(" and hphm like ? ");
+			param.add("%" + info.getHphm() + "%");
+		}
+		if (StringUtils.isNotBlank(info.getHpzl())){
+			sb.append(" and hpzl = ? ");
+			param.add(info.getHpzl());
+		}
 
-		if (StringUtils.isNotBlank(info.getHpzl()))
-			sb.append(" and hpzl = '").append(info.getHpzl()).append("' ");
+		if (StringUtils.isNotBlank(info.getKssj())){
+			sb.append(" and bksj >=to_date(?, 'yyyy-mm-dd hh24:mi:ss') ");
+			param.add(info.getKssj());
+		}
 
-		if (StringUtils.isNotBlank(info.getKssj()))
-			sb.append(" and bksj >=to_date('").append(info.getKssj()).append(
-					"', 'yyyy-mm-dd hh24:mi:ss') ");
-
-		if (StringUtils.isNotBlank(info.getJssj()))
-			sb.append(" and bksj <=to_date('").append(info.getJssj()).append(
-					"', 'yyyy-mm-dd hh24:mi:ss') ");
+		if (StringUtils.isNotBlank(info.getJssj())){
+			sb.append(" and bksj <=to_date(?, 'yyyy-mm-dd hh24:mi:ss') ");
+			param.add(info.getJssj());
+		}
 
 		if (StringUtils.isBlank(info.getKssj())
 				&& StringUtils.isBlank(info.getJssj())) {
 			sb.append("  and bksj >= sysdate-365  ");
 		}
-
+		List list = new ArrayList<>();
 		StringBuffer sql = new StringBuffer(
 				"select bkxh, hpzl,hphm,bkdl,bklb,to_char(bksj,'yyyy-mm-dd hh24:mi:ss') as bksj,to_char(bkjzsj,'yyyy-mm-dd hh24:mi:ss') as bkjzsj, lar,ladw,ywzt,BKJGMC,bkfwlx  from ");
 
 		sql.append(" VEH_SUSPINFO where 1=1 ");
 		if (StringUtils.isNotBlank(info.getBkfwlx())){
-			sql.append(" and BKFWLX = '").append(info.getBkfwlx()).append("'");
+			sql.append(" and BKFWLX = ?");
+			list.add(info.getBkfwlx());
 		}
 
 		if (StringUtils.isNotBlank(info.getYwzt())) {
-			sql.append(" and ywzt in(").append(info.getYwzt()).append(") ");
+			sql.append(" and ywzt in(?) ");
+			list.add(info.getYwzt());
 		} else {
 			sql.append(" and ywzt in('11','13')");
 		}
-
 		sql.append(sb);
-		sql.append(" and bkr = '").append(info.getBkr()).append("' ");
+		for (Object o : param) {
+			list.add(o);
+		}
+
+		sql.append(" and bkr = ? ");
+		list.add(info.getBkr());
 		sql.append(" order by gxsj desc ");
 
+		Object[] array = list.toArray(new Object[list.size()]);
 		Map mapt = new HashMap();
 		mapt.put("sql", sql);
-		mapt.put("data", this.getSelf().findPageForMap(sql.toString(),
+		mapt.put("data", this.getSelf().findPageForMap(sql.toString(),array,
 				Integer.parseInt(map.get("curPage").toString()),
 				Integer.parseInt(map.get("pageSize").toString())));
 		return mapt;
@@ -100,112 +117,135 @@ public class SuspEditDaoImpl extends BaseDaoImpl implements SuspinfoEditDao {
 	// 更新布控表
 	public int updateSuspinfo(VehSuspinfo suspInfo) throws Exception {
 
+		List param = new ArrayList<>();
 		StringBuffer sql = new StringBuffer(
 				"UPDATE veh_suspinfo set bksj = sysdate,gxsj = sysdate ");
 		if (StringUtils.isNotBlank(suspInfo.getHphm())) {
-			sql.append(", hphm = '").append(suspInfo.getHphm()).append("' ");
+			sql.append(", hphm = ? ");
+			param.add(suspInfo.getHphm());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getHpzl())){
-			sql.append(", hpzl = '").append(suspInfo.getHpzl()).append("' ");
+			sql.append(", hpzl = ? ");
+			param.add(suspInfo.getHpzl());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getBkdl())) {
-			sql.append(", bkdl = '").append(suspInfo.getBkdl()).append("' ");
+			sql.append(", bkdl = ? ");
+			param.add(suspInfo.getBkdl());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getBklb())) {
-			sql.append(",bklb = '").append(suspInfo.getBklb()).append("' ");
+			sql.append(",bklb = ? ");
+			param.add(suspInfo.getBklb());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getClxh())) {
-			sql.append(",clxh = '").append(suspInfo.getClxh()).append("' ");
+			sql.append(",clxh = ? ");
+			param.add(suspInfo.getClxh());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getFdjh())) {
-			sql.append(",fdjh = '").append(suspInfo.getFdjh()).append("' ");
+			sql.append(",fdjh = ? ");
+			param.add(suspInfo.getFdjh());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getClsyr())) {
-			sql.append(", clsyr = '").append(suspInfo.getClsyr()).append("' ");
+			sql.append(", clsyr = ? ");
+			param.add(suspInfo.getClsyr());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getSyrlxdh())) {
-			sql.append(", syrlxdh = '").append(suspInfo.getSyrlxdh()).append(
-					"' ");
+			sql.append(", syrlxdh = ? ");
+			param.add(suspInfo.getSyrlxdh());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getSyrxxdz())) {
-			sql.append(", syrxxdz = '").append(suspInfo.getSyrxxdz()).append(
-					"' ");
+			sql.append(", syrxxdz = ? ");
+			param.add(suspInfo.getSyrxxdz());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getBkqssj())) {
-			sql.append(", bkqssj = to_date('").append(
-					suspInfo.getBkqssj().substring(0, 10) + " 00:00:00")
-					.append("','yyyy-mm-dd hh24:mi:ss') ");
+			sql.append(", bkqssj = to_date(?,'yyyy-mm-dd hh24:mi:ss') ");
+			param.add(suspInfo.getBkqssj().substring(0, 10)+" 00:00:00");
 		}
 		if (StringUtils.isNotBlank(suspInfo.getBkjzsj())) {
-			sql.append(", bkjzsj = to_date('").append(
-					suspInfo.getBkjzsj().substring(0, 10) + " 23:59:59")
-					.append("','yyyy-mm-dd hh24:mi:ss') ");
+			sql.append(", bkjzsj = to_date(?,'yyyy-mm-dd hh24:mi:ss') ");
+			param.add(suspInfo.getBkjzsj().substring(0, 10)+" 23:59:59");
 		}
 		if (StringUtils.isNotBlank(suspInfo.getBkjglxdh())) {
-			sql.append(", bkjglxdh = '").append(suspInfo.getBkjglxdh()).append(
-					"' ");
+			sql.append(", bkjglxdh = ? ");
+			param.add(suspInfo.getBkjglxdh());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getBkfw())) {
-			sql.append(", bkfw = '").append(suspInfo.getBkfw()).append("' ");
+			sql.append(", bkfw = ? ");
+			param.add(suspInfo.getBkfw());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getJyaq())) {
-			sql.append(", jyaq = '").append(suspInfo.getJyaq()).append("' ");
+			sql.append(", jyaq = ? ");
+			param.add(suspInfo.getJyaq());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getClpp())) {
-			sql.append(",clpp = '").append(suspInfo.getClpp()).append("' ");
+			sql.append(",clpp = ? ");
+			param.add(suspInfo.getClpp());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getCsys())) {
-			sql.append(", csys = '").append(suspInfo.getCsys()).append("' ");
+			sql.append(", csys = ? ");
+			param.add(suspInfo.getCsys());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getBjfs())) {
-			sql.append(", bjfs = '").append(suspInfo.getBjfs()).append("' ");
+			sql.append(", bjfs = ? ");
+			param.add(suspInfo.getBjfs());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getBkjb())) {
-			sql.append(", bkjb = '").append(suspInfo.getBkjb()).append("' ");
+			sql.append(", bkjb = ? ");
+			param.add(suspInfo.getBkjb());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getDxjshm())) {
-			sql.append(", dxjshm = '").append(suspInfo.getDxjshm())
-					.append("' ");
+			sql.append(", dxjshm = ? ");
+			param.add(suspInfo.getDxjshm());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getBkxz())) {
-			sql.append(", bkxz = '").append(suspInfo.getBkxz()).append("' ");
+			sql.append(", bkxz = ? ");
+			param.add(suspInfo.getBkxz());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getBjya())) {
-			sql.append(", bjya = '").append(suspInfo.getBjya()).append("' ");
+			sql.append(", bjya = ? ");
+			param.add(suspInfo.getBjya());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getHpys())) {
-			sql.append(", hpys = '").append(suspInfo.getHpys()).append("' ");
+			sql.append(", hpys = ? ");
+			param.add(suspInfo.getHpys());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getSqsb())) {
-			sql.append(", sqsb = '").append(suspInfo.getSqsb()).append("' ");
+			sql.append(", sqsb = ? ");
+			param.add(suspInfo.getSqsb());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getLadw())) {
-			sql.append(", ladw = '").append(suspInfo.getLadw()).append("' ");
+			sql.append(", ladw = ? ");
+			param.add(suspInfo.getLadw());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getLadwlxdh())) {
-			sql.append(", ladwlxdh = '").append(suspInfo.getLadwlxdh()).append(
-					"' ");
+			sql.append(", ladwlxdh = ? ");
+			param.add(suspInfo.getLadwlxdh());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getLar())) {
-			sql.append(", lar = '").append(suspInfo.getLar()).append("' ");
+			sql.append(", lar = ? ");
+			param.add(suspInfo.getLar());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getCllx())) {
-			sql.append(", cllx = '").append(suspInfo.getCllx()).append("' ");
+			sql.append(", cllx = ? ");
+			param.add(suspInfo.getCllx());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getYwzt())) {
-			sql.append(", ywzt = '").append(suspInfo.getYwzt()).append("' ");
+			sql.append(", ywzt = ? ");
+			param.add(suspInfo.getYwzt());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getCltz())) {
-			sql.append(", cltz = '").append(suspInfo.getCltz()).append("' ");
+			sql.append(", cltz = ? ");
+			param.add(suspInfo.getCltz());
 		}
 		if (StringUtils.isNotBlank(suspInfo.getClsbdh())) {
-			sql.append(", clsbdh = '").append(suspInfo.getClsbdh())
-					.append("' ");
+			sql.append(", clsbdh = ? ");
+			param.add(suspInfo.getClsbdh());
 		}
 
-		sql.append("  where bkxh = '").append(suspInfo.getBkxh()).append("' ");
+		sql.append("  where bkxh = ? ");
+		param.add(suspInfo.getBkxh());
 
-		int i = this.jdbcTemplate.update(sql.toString());
+		Object[] array = param.toArray(new Object[param.size()]);
+		int i = this.jdbcTemplate.update(sql.toString(),array);
 
 		return i;
 	}
@@ -214,19 +254,26 @@ public class SuspEditDaoImpl extends BaseDaoImpl implements SuspinfoEditDao {
 
 	// 删除未审批布控记录需更新布控表
 	public int updateSuspInfoForDel(VehSuspinfo info) throws Exception {
-
+		List param = new ArrayList<>();
 		StringBuffer sb = new StringBuffer(
 				"UPDATE veh_suspinfo set ywzt = '99',jlzt = '2',gxsj = sysdate,ckyydm = '00' ");
-		sb.append(",ckyyms = '").append(info.getCkyyms()).append("' ");
-		sb.append(", cxsqr = '").append(info.getCxsqr()).append("' ");
-		sb.append(", cxsqrjh = '").append(info.getCxsqrjh()).append("' ");
-		sb.append(", cxsqrmc = '").append(info.getCxsqrmc()).append("' ");
-		sb.append(", cxsqdw = '").append(info.getCxsqdw()).append("' ");
-		sb.append(", cxsqdwmc = '").append(info.getCxsqdwmc()).append("' ");
+		sb.append(",ckyyms = ? ");
+		param.add(info.getCkyyms());
+		sb.append(", cxsqr = ? ");
+		param.add(info.getCxsqr());
+		sb.append(", cxsqrjh = ? ");
+		param.add(info.getCxsqrjh());
+		sb.append(", cxsqrmc = ? ");
+		param.add(info.getCxsqrmc());
+		sb.append(", cxsqdw = ? ");
+		param.add(info.getCxsqdw());
+		sb.append(", cxsqdwmc = ? ");
+		param.add(info.getCxsqdwmc());
 		sb.append(" , cxsqsj   = sysdate ");
-		sb.append("  where bkxh = '").append(info.getBkxh()).append("' ");
-
-		int i = this.jdbcTemplate.update(sb.toString());
+		sb.append("  where bkxh = ? ");
+		param.add(info.getBkxh());
+		Object[] array = param.toArray(new Object[param.size()]);
+		int i = this.jdbcTemplate.update(sb.toString(),array);
 
 		return i;
 
@@ -235,17 +282,17 @@ public class SuspEditDaoImpl extends BaseDaoImpl implements SuspinfoEditDao {
 	// 删除未审批布控写入日志表
 	public int insertBusinessLogForDel(VehSuspinfo info, String ssjz)
 			throws Exception {
-
+		List param = new ArrayList<>();
 		StringBuffer sql = new StringBuffer(
 				"INSERT into BUSINESS_LOG(xh, ywxh, ywlb, ywjb, czrdh, czrjh, czrdwdm, czrdwjz) ");
-		sql.append(" values(seq_business_log_xh.nextval,'").append(
-				info.getBkxh()).append("' ").append(",'13','2','").append(
-				info.getCxsqr()).append("', '").append(info.getCxsqrjh())
-				.append("' ").append(",'").append(info.getCxsqdw()).append(
-						"','").append(ssjz).append("') ");
+		sql.append(" values(seq_business_log_xh.nextval,? ").append(",'13','2',?, ?,?,?) ");
+		param.add(info.getBkxh());
+		param.add(info.getCxsqr());
+		param.add(info.getCxsqrjh());
+		param.add(info.getCxsqdw());
+		param.add(ssjz);
 
-		int i = this.jdbcTemplate.update(sql.toString());
-
+		int i = this.jdbcTemplate.update(sql.toString(),param.toArray());
 		return i;
 	}
 
@@ -269,24 +316,29 @@ public class SuspEditDaoImpl extends BaseDaoImpl implements SuspinfoEditDao {
 
 	public int getSuspinfoEditCount(String begin, String end, String yhdh,
 			String bkfwlx) throws Exception {
-		String tmpSql = "Select * from veh_suspinfo Where BKFWLX='" + bkfwlx
-				+ "' and YWZT in ('13') and XXLY='0' and bkr='" + yhdh + "'";
+		List param = new ArrayList<>();
+		String tmpSql = "Select * from veh_suspinfo Where BKFWLX=? and YWZT in ('13') and " +
+				"XXLY='0' and bkr=?";
+		param.add(bkfwlx);
+		param.add(yhdh);
 		if (begin != null && begin.length() > 0) {
-			tmpSql = tmpSql + " and bksj >= to_date('" + begin
-					+ " 00:00:00','yyyy-mm-dd hh24:mi:ss')";
+			tmpSql = tmpSql + " and bksj >= to_date(?,'yyyy-mm-dd hh24:mi:ss')";
+			param.add(begin+" 00:00:00");
 		}
 		if (end != null && end.length() > 0) {
-			tmpSql = tmpSql + " and bksj <= to_date('" + end
-					+ " 23:59:59','yyyy-mm-dd hh24:mi:ss')";
+			tmpSql = tmpSql + " and bksj <= to_date(?,'yyyy-mm-dd hh24:mi:ss')";
+			param.add(end+" 23:59:59");
 		}
-		int count = this.getSelf().getRecordCounts(tmpSql, 0);
+		int count = this.getSelf().getRecordCounts(tmpSql, param.toArray(),0);
 		return count;
 	}
 
 	public AuditApprove getAuditApprove(String bkxh)
 			throws Exception {
-        String sql = " select * from audit_approve where bkxh='"+bkxh+"' and czsj = (select max(czsj) from audit_approve where bkxh = '"+bkxh+"')";
-        AuditApprove au = this.queryForObject(sql,AuditApprove.class);
+        String sql = " select * from audit_approve where bkxh=? and czsj = (select max(czsj) from" +
+				" audit_approve where bkxh = ?)";
+        AuditApprove au = this.queryForObject(sql,new Object[]{bkxh,bkxh},
+				AuditApprove.class);
         if(au==null)
         	return null;
 		return au;

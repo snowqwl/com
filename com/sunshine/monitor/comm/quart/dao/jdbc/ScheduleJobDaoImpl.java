@@ -1,10 +1,7 @@
 package com.sunshine.monitor.comm.quart.dao.jdbc;
 
 import java.sql.Types;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.Map.Entry;
 
 import org.springframework.stereotype.Repository;
@@ -27,13 +24,15 @@ public class ScheduleJobDaoImpl extends BaseDaoImpl implements ScheduleJobDao {
 	public Map<String, Object> queryScheduleList(
 			Map<String, Object> conditions, String tableName) throws Exception {
 		String table = "";
+		List param = new ArrayList<>();
 		if (tableName == null || "".equals(tableName)) {
 			table = this.getTableName();
 		} else {
 			table = tableName;
 		}
 		StringBuffer sql = new StringBuffer(50);
-		sql.append("SELECT RWBH,RWMC,RWZT,ZXSJ,RWZQ,CWNR,CCGC,SXL,SXLFF,BZ FROM " + table + " where 1=1 ");
+		sql.append("SELECT RWBH,RWMC,RWZT,ZXSJ,RWZQ,CWNR,CCGC,SXL,SXLFF,BZ FROM ? where 1=1 ");
+		param.add(table);
 		Set<Entry<String, Object>> set = conditions.entrySet();
 		Iterator<Entry<String, Object>> it = set.iterator();
 		while (it.hasNext()) {
@@ -47,42 +46,43 @@ public class ScheduleJobDaoImpl extends BaseDaoImpl implements ScheduleJobDao {
 			if (!isFilter) {
 				// 模糊查询
 				if ("rwmc".equalsIgnoreCase(key)) {
-					sql.append(" and rwmc like '%");
-					sql.append(value);
-					sql.append("%'");
+					sql.append(" and rwmc like ?");
+					param.add(new String[]{"%"+value+"%"});
 				} else {
-					sql.append(" and ");
-					sql.append(key);
-					sql.append(" = '").append(value).append("'");
+					sql.append(" and ? = ?");
+					param.add(key);
+					param.add(value);
 				}
 			}
 		}
-		sql.append(" order by ");
-		sql.append(conditions.get("sort"));
-		sql.append(" ");
-		sql.append(conditions.get("order"));
-		Map<String, Object> map = findPageForMap(sql.toString(), Integer
+		sql.append(" order by ? ?");
+		param.add(conditions.get("sort"));
+		param.add(conditions.get("order"));
+
+		Object[] array = param.toArray(new Object[param.size()]);
+
+		Map<String, Object> map = findPageForMap(sql.toString(),array, Integer
 				.parseInt(conditions.get("page").toString()), Integer
 				.parseInt(conditions.get("rows").toString()));
 		return map;
 	}
 
 	public String addSchedule(JobEntity jobEntity) throws Exception {
+		List param = new ArrayList<>();
 		String x_sql = "SELECT SEQ_TRANS_SCHEDULE_RWBH.Nextval FROM dual";
 		String t_rwbh = (String) this.jdbcTemplate.queryForObject(x_sql,
 				String.class);
 		String rwbh = "A" + Common.addZeroStr(t_rwbh, 4);
 		String sql = "INSERT INTO JM_TRANS_SCHEDULE(RWBH,RWMC,RWZT,ZXSJ,RWZQ,CCGC,SXL,SXLFF)VALUES('"
-				+ rwbh
-				+ "','"
-				+ jobEntity.getRwmc()
-				+ "','1',sysdate,'"
-				+ jobEntity.getRwzq()
-				+ "','"
-				+ jobEntity.getCcgc()
-				+ "','"
-				+ jobEntity.getSxl() + "','" + jobEntity.getSxlff() + "')";
-		int result = this.jdbcTemplate.update(sql);
+				+ rwbh + "',?,'1',sysdate,?,?,?,?)";
+		param.add(jobEntity.getRwmc());
+		param.add(jobEntity.getRwzq());
+		param.add(jobEntity.getCcgc());
+		param.add(jobEntity.getSxl());
+		param.add(jobEntity.getSxlff());
+
+		Object[] array = param.toArray(new Object[param.size()]);
+		int result = this.jdbcTemplate.update(sql,array);
 		if (result == 1) {
 			return rwbh;
 		}
@@ -90,9 +90,8 @@ public class ScheduleJobDaoImpl extends BaseDaoImpl implements ScheduleJobDao {
 	}
 
 	public int deleteById(String rwbh) throws Exception {
-		String sql = "delete from JM_TRANS_SCHEDULE where rwbh = '" + rwbh
-				+ "'";
-		return this.jdbcTemplate.update(sql);
+		String sql = "delete from JM_TRANS_SCHEDULE where rwbh = ?";
+		return this.jdbcTemplate.update(sql,rwbh);
 	}
 
 	public JobEntity getJobEntityByRwbh(String rwbh) throws Exception {
@@ -118,12 +117,19 @@ public class ScheduleJobDaoImpl extends BaseDaoImpl implements ScheduleJobDao {
 	}
 
 	public int updateJobEntity(JobEntity jobEntity) throws Exception {
-		String sql = "update JM_TRANS_SCHEDULE set rwmc='"
-				+ jobEntity.getRwmc() + "',rwzq= '" + jobEntity.getRwzq()
-				+ "',sxl='" + jobEntity.getSxl() + "',sxlff='"
-				+ jobEntity.getSxlff() + "',ccgc='" + jobEntity.getCcgc()
-				+ "',rwzt='1' where rwbh = '" + jobEntity.getRwbh() + "'";
-		int result = this.jdbcTemplate.update(sql);
+		List param = new ArrayList<>();
+		String sql =
+				"update JM_TRANS_SCHEDULE set rwmc=?,rwzq= ?,sxl=?,sxlff=?,ccgc=?,rwzt='1' where rwbh = ?";
+
+		param.add(jobEntity.getRwmc());
+		param.add(jobEntity.getRwzq());
+		param.add(jobEntity.getSxl());
+		param.add(jobEntity.getSxlff());
+		param.add(jobEntity.getCcgc());
+		param.add(jobEntity.getRwbh());
+
+		Object[] array = param.toArray(new Object[param.size()]);
+		int result = this.jdbcTemplate.update(sql,array);
 		return result;
 	}
 
@@ -136,9 +142,9 @@ public class ScheduleJobDaoImpl extends BaseDaoImpl implements ScheduleJobDao {
 
 	public int updateJobErrordesc(String rwbh, String cwnr) throws Exception {
 		cwnr = cwnr.replaceAll("'", "''");
-		String sql = "UPDATE JM_TRANS_SCHEDULE SET CWNR = '" + cwnr
-				+ "' WHERE RWBH = '" + rwbh + "'";
-		int result = this.jdbcTemplate.update(sql);
+		String sql = "UPDATE JM_TRANS_SCHEDULE SET CWNR = ? WHERE RWBH = ?";
+
+		int result = this.jdbcTemplate.update(sql,new Object[]{cwnr,rwbh});
 		// this.jdbcTemplate.update(sql, new Object[] { cwnr, rwbh },
 		// new int[] { Types.VARCHAR, Types.VARCHAR });
 		return result;
@@ -158,15 +164,21 @@ public class ScheduleJobDaoImpl extends BaseDaoImpl implements ScheduleJobDao {
 
 	public int saveLog(String rwbh, String zxsj, String czlx, String czjg,
 			String cwnr) throws Exception {
-		String sql = "INSERT INTO JM_TRANS_SCHEDULE_LOG(xh,rwbh,zxsj,jssj,czlx,czjg,cwnr) values(SEQ_SCHEDULE_LOG.Nextval,'"
-				+ rwbh
-				+ "', to_date('"
-				+ zxsj
-				+ "','yyyy-mm-dd hh24:mi:ss'), sysdate ,'"
-				+ czlx
-				+ "', '"
-				+ czjg + "', '" + cwnr + "')";
-		int result = this.jdbcTemplate.update(sql);
+		List param = new ArrayList<>();
+		String sql =
+				"INSERT INTO JM_TRANS_SCHEDULE_LOG(xh,rwbh,zxsj,jssj,czlx,czjg,cwnr) values" +
+						"(SEQ_SCHEDULE_LOG.Nextval,?, to_date(?,'yyyy-mm-dd hh24:mi:ss'), sysdate" +
+						" ,?, ?, ?)";
+
+		param.add(rwbh);
+		param.add(zxsj);
+		param.add(czlx);
+		param.add(czjg);
+		param.add(cwnr);
+
+		Object[] array = param.toArray(new Object[param.size()]);
+
+		int result = this.jdbcTemplate.update(sql,param);
 		return result;
 	}
 
@@ -194,10 +206,12 @@ public class ScheduleJobDaoImpl extends BaseDaoImpl implements ScheduleJobDao {
 	}
 
 	public void updateJob(JobEntity jobEntity) throws Exception {
-		String sql = "UPDATE JM_TRANS_SCHEDULE set rwzt='"
-				+ jobEntity.getRwzt() + "',cwnr='"
-				+ jobEntity.getCwnr().replaceAll("'", "''") + "' where rwbh='"
-				+ jobEntity.getRwbh() + "'";
-		this.jdbcTemplate.update(sql);
+		List param = new ArrayList<>();
+		String sql = "UPDATE JM_TRANS_SCHEDULE set rwzt=?,cwnr=? where rwbh=?";
+		param.add(jobEntity.getRwzt());
+		param.add(jobEntity.getCwnr().replaceAll("'", "''"));
+		param.add(jobEntity.getRwbh());
+		Object[] array = param.toArray(new Object[param.size()]);
+		this.jdbcTemplate.update(sql,array);
 	}
 }

@@ -1,5 +1,6 @@
 package com.sunshine.monitor.system.query.dao.impl;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -67,6 +68,7 @@ public class KsywtjQueryDaoImpl extends BaseDaoImpl implements KsywtjQueryDao{
 		String kssj = conditions.get("kssj").toString();
 		String jssj = conditions.get("jssj").toString();
 		String dwdm = conditions.get("dwdm").toString();
+		List param = new ArrayList<>();
 		StringBuffer sql = new StringBuffer("select to_char(x.czsj, 'yyyy-mm-dd hh24:mi') czsj, x.cznr, x.ip, x.bmmc, x.yhmc, y.czlx");
 				sql.append(" from (select a.czsj, a.czlx, a.cznr, a.glbm, a.ip, b.bmmc, c.yhmc");
 				sql.append(" from frm_log a, frm_department b, frm_sysuser c");
@@ -76,12 +78,15 @@ public class KsywtjQueryDaoImpl extends BaseDaoImpl implements KsywtjQueryDao{
 				sql.append(" order by a.czsj desc) x,");
 				sql.append(" (select dmz, dmsm1 czlx from frm_code where dmlb = '000012') y");
 				sql.append(" where x.czlx = y.dmz");
-				sql.append(" and x.czsj >= to_date('"+kssj+"','yyyy-mm-dd hh24:mi:ss')");
-				sql.append(" and x.czsj <= to_date('"+jssj+"','yyyy-mm-dd hh24:mi:ss')");
-				sql.append(" and substr(x.glbm, 0, 4) || '00000000' = '"+dwdm+"'");
+				sql.append(" and x.czsj >= to_date(?,'yyyy-mm-dd hh24:mi:ss')");
+				sql.append(" and x.czsj <= to_date(?,'yyyy-mm-dd hh24:mi:ss')");
+				sql.append(" and substr(x.glbm, 0, 4) || '00000000' = ?");
 				sql.append(" order by x.czsj desc");
+				param.add(kssj);
+				param.add(jssj);
+				param.add(dwdm);
 	
-		Map<String, Object> map = this.findPageForMap(sql.toString(),
+		Map<String, Object> map = this.findPageForMap(sql.toString(),param.toArray(),
 				Integer.parseInt(conditions.get("page").toString()),
 				Integer.parseInt(conditions.get("rows").toString()));
 		return map;
@@ -93,15 +98,20 @@ public class KsywtjQueryDaoImpl extends BaseDaoImpl implements KsywtjQueryDao{
 		String kssj = conditions.get("kssj").toString();
 		String jssj = conditions.get("jssj").toString();
 		String dwdm = conditions.get("dwdm").toString();
+		List param = new ArrayList<>();
 		StringBuffer sql = new StringBuffer("select s.*,");
 				sql.append(" (select c.dmsm1 from frm_code c where c.dmlb = '030107' and c.dmz = s.hpzl) as HPZLMC,");
 				sql.append(" (select c.dmsm1 from frm_code c where c.dmlb = '120019' and c.dmz = s.bkdl) as BKDLMC");
 				sql.append(" from  frm_department d ,veh_suspinfo s ");
 				sql.append(" where d.glbm = s.bkjg and s.bkfwlx = '3' ");
-				sql.append(" and s.bksj >= to_date('"+kssj+"','yyyy-mm-dd hh24:mi:ss')");
-				sql.append(" and s.bksj <= to_date('"+jssj+"','yyyy-mm-dd hh24:mi:ss')");
-				sql.append(" and s.ywzt = '14' and substr(s.bkjg,0,4) || '00000000' = '"+dwdm+"' order by bksj desc ");		
-		Map<String, Object> map = this.findPageForMap(sql.toString(),
+				sql.append(" and s.bksj >= to_date(?,'yyyy-mm-dd hh24:mi:ss')");
+				sql.append(" and s.bksj <= to_date(?,'yyyy-mm-dd hh24:mi:ss')");
+				sql.append(" and s.ywzt = '14' and substr(s.bkjg,0,4) || '00000000' = ? order by " +
+						"bksj desc ");
+				param.add(kssj);
+				param.add(jssj);
+				param.add(dwdm);
+		Map<String, Object> map = this.findPageForMap(sql.toString(),param.toArray(),
 				Integer.parseInt(conditions.get("page").toString()),
 				Integer.parseInt(conditions.get("rows").toString()));
 		return map;
@@ -113,6 +123,7 @@ public class KsywtjQueryDaoImpl extends BaseDaoImpl implements KsywtjQueryDao{
 		String kssj = conditions.get("kssj").toString();
 		String jssj = conditions.get("jssj").toString();
 		String dwdm = conditions.get("dwdm").toString();
+		List param = new ArrayList<>();
 		StringBuffer sql = new StringBuffer("select s.*,");
 				sql.append(" (select c.dmsm1 from frm_code c where c.dmlb = '030107' and c.dmz = s.hpzl) as HPZLMC,");
 				sql.append(" (select c.dmsm1 from frm_code c where c.dmlb = '120019' and c.dmz = s.bkdl) as BKDLMC,");
@@ -122,8 +133,11 @@ public class KsywtjQueryDaoImpl extends BaseDaoImpl implements KsywtjQueryDao{
 				//由于2016-11-22开始走一键撤控流程，流程里没有更新撤控相关的信息（撤控申请时间为空）
 //				sql.append(" and s.cxsqsj >= to_date('"+kssj+"','yyyy-mm-dd hh24:mi:ss')");
 //				sql.append(" and s.cxsqsj <= to_date('"+jssj+"','yyyy-mm-dd hh24:mi:ss')");
-				sql.append(" and s.ywzt = '99' and substr(s.bkjg,0,4) || '00000000' = '"+dwdm+"' order by bksj desc ");		
-		Map<String, Object> map = this.findPageForMap(sql.toString(),
+				sql.append(" and s.ywzt = '99' and substr(s.bkjg,0,4) || '00000000' = ? order by " +
+						"bksj desc ");
+
+		param.add(dwdm);
+		Map<String, Object> map = this.findPageForMap(sql.toString(),param.toArray(),
 				Integer.parseInt(conditions.get("page").toString()),
 				Integer.parseInt(conditions.get("rows").toString()));
 		return map;
@@ -135,16 +149,20 @@ public class KsywtjQueryDaoImpl extends BaseDaoImpl implements KsywtjQueryDao{
 		String kssj = conditions.get("kssj").toString();
 		String jssj = conditions.get("jssj").toString();
 		String dwdm = conditions.get("dwdm").toString();
+		List param = new ArrayList<>();
 		StringBuffer sql = new StringBuffer("select a.*,");
 				sql.append(" (select c.dmsm1 from frm_code c where c.dmlb = '030107' and c.dmz = a.hpzl) as HPZLMC,");
 				sql.append(" (select c.dmsm1 from frm_code c where c.dmlb = '120019' and c.dmz = a.bjdl) as BJDLMC,");
 				sql.append(" (select c.dmsm1 from frm_code c where c.dmlb = '120005' and c.dmz = a.bjlx) as BJLXMC");
 				sql.append(" from veh_alarmrec a,veh_suspinfo s,frm_department d "); 
 				sql.append(" where a.bkxh = s.bkxh and s.bkjg = d.glbm and s.bkfwlx = '3'");
-				sql.append(" and a.bjsj >=to_date('"+kssj+"','yyyy-mm-dd hh24:mi:ss')");
-				sql.append(" and a.bjsj <=to_date('"+jssj+"','yyyy-mm-dd hh24:mi:ss')");
-				sql.append(" and substr(a.bjdwdm,0,4) || '00000000' = '"+dwdm+"' order by a.bjsj desc");		
-		Map<String, Object> map = this.findPageForMap(sql.toString(),
+				sql.append(" and a.bjsj >=to_date(?,'yyyy-mm-dd hh24:mi:ss')");
+				sql.append(" and a.bjsj <=to_date(?,'yyyy-mm-dd hh24:mi:ss')");
+				sql.append(" and substr(a.bjdwdm,0,4) || '00000000' = ? order by a.bjsj desc");
+		param.add(kssj);
+		param.add(jssj);
+		param.add(dwdm);
+		Map<String, Object> map = this.findPageForMap(sql.toString(),param.toArray(),
 				Integer.parseInt(conditions.get("page").toString()),
 				Integer.parseInt(conditions.get("rows").toString()));
 		return map;

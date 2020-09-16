@@ -241,12 +241,30 @@ public abstract class BaseDaoImpl implements ExpandBaseDao, BeanSelfAware,
 		return t;
 	}
 
+	public <T> T queryObject(String sql, Class<T> classz,Object... params) throws Exception {
+		long _1 = System.currentTimeMillis();
+		T t = this.jdbcTemplate.queryForObject(sql, new JcbkRowMapper<T>(
+				classz),params);
+		long _2 = System.currentTimeMillis();
+		log.debug("Query Object("+(_2-_1)+"ms)-->"+ sql);
+		return t;
+	}
+
 	/**
 	 * 根据SQL语句查询返回列表
 	 */
 	public <T> List<T> queryList(String sql, Class<T> classz) throws Exception {
 		
 		return queryForList(jdbcTemplate, sql, classz);
+	}
+	public <T> List<T> queryList(String sql, Object[] args,Class<T> classz) throws Exception {
+
+		return queryForList(jdbcTemplate, args,sql, classz);
+	}
+
+	public <T> List<T> queryList(String sql, Class<T> classz,Object ... params) throws Exception {
+
+		return queryForList(jdbcTemplate, sql, classz,params);
 	}
 
 	/**
@@ -265,6 +283,19 @@ public abstract class BaseDaoImpl implements ExpandBaseDao, BeanSelfAware,
 		}
 		return t;
 	}
+	public <T> T queryForObject(String sql, Object[] array,Class<T> classz) {
+		T t = null;
+		try {
+			long _1 = System.currentTimeMillis();
+			t = this.jdbcTemplate.queryForObject(sql, array,new JcbkRowMapper<T>(
+					classz));
+			long _2 = System.currentTimeMillis();
+			log.debug("Query Object("+(_2-_1)+"ms)-->"+ sql);
+		} catch (EmptyResultDataAccessException e) {
+			//e.printStackTrace();
+		}
+		return t;
+	}
 
 	/**
 	 * 根据SQL语句查询返回列表
@@ -272,6 +303,9 @@ public abstract class BaseDaoImpl implements ExpandBaseDao, BeanSelfAware,
 	public <T> List<T> queryForList(String sql, Class<T> classz) {
 		
 		return queryForList(jdbcTemplate, sql, classz);
+	}
+	public <T> List<T> queryForList(String sql, Class<T> classz,Object[] array) {
+		return queryForList(jdbcTemplate, sql, classz,array);
 	}
 	
 	/**
@@ -296,6 +330,20 @@ public abstract class BaseDaoImpl implements ExpandBaseDao, BeanSelfAware,
 		return list;
 	}
 
+	/**
+	 * 根据SQL语句查询返回列表
+	 */
+	public List queryForListWithText(String sql,JdbcTemplate jd,String search_text) {
+		long _1 = System.currentTimeMillis();
+		List list = jd.queryForList(sql,search_text);
+		long _2 = System.currentTimeMillis();
+		log.debug("Query List("+(_2-_1)+"ms)-->"+ sql);
+		return list;
+	}
+
+
+
+
 
 	/**
 	 * 根据SQL语句查询返回列表
@@ -304,6 +352,22 @@ public abstract class BaseDaoImpl implements ExpandBaseDao, BeanSelfAware,
 			Class<T> classz) {
 		long _1 = System.currentTimeMillis();
 		List<T> list = jTemplate.query(sql, new JcbkRowMapper<T>(classz));
+		long _2 = System.currentTimeMillis();
+		log.debug("Query List("+(_2-_1)+"ms)-->"+ sql);
+		return list;
+	}
+	public <T> List<T> queryForList(JdbcTemplate jTemplate, Object[] args,String sql,
+									Class<T> classz) {
+		long _1 = System.currentTimeMillis();
+		List<T> list = jTemplate.query(sql, args,new JcbkRowMapper<T>(classz));
+		long _2 = System.currentTimeMillis();
+		log.debug("Query List("+(_2-_1)+"ms)-->"+ sql);
+		return list;
+	}
+	public <T> List<T> queryForList(JdbcTemplate jTemplate, String sql,
+									Class<T> classz,Object ... params) {
+		long _1 = System.currentTimeMillis();
+		List<T> list = jTemplate.query(sql, new JcbkRowMapper<T>(classz),params);
 		long _2 = System.currentTimeMillis();
 		log.debug("Query List("+(_2-_1)+"ms)-->"+ sql);
 		return list;
@@ -319,6 +383,16 @@ public abstract class BaseDaoImpl implements ExpandBaseDao, BeanSelfAware,
 	public int getRecordCounts(String sql, int limit){
 		
 		return getRecordCounts(sql, jdbcTemplate, limit);
+	}
+
+	public int getRecordCounts(String sql, Object[] array,int limit){
+
+		return getRecordCounts(sql, array,jdbcTemplate, limit);
+	}
+
+	public int getRecordCounts(String sql, int limit,Object ... params){
+
+		return getRecordCounts(sql, jdbcTemplate, limit,params);
 	}
 	
 	/**
@@ -336,6 +410,29 @@ public abstract class BaseDaoImpl implements ExpandBaseDao, BeanSelfAware,
 		log.debug("COUNT("+(_2-_1)+"ms)-->"+ countSql);
 		return records;
 	}
+	public int getRecordCounts(String sql,Object array,JdbcTemplate jdt, int limit){
+		String countSql = PagingSqlBuilder.getCountSql(sql,limit);
+		long _1 = System.currentTimeMillis();
+		int records = jdt.queryForInt(countSql,array);
+		long _2 = System.currentTimeMillis();
+		log.debug("COUNT("+(_2-_1)+"ms)-->"+ countSql);
+		return records;
+	}
+	public int getRecordCounts(String sql,JdbcTemplate jdt, int limit,Object ... params){
+		String countSql = PagingSqlBuilder.getCountSql(sql, limit);
+		long _1 = System.currentTimeMillis();
+		int records = jdt.queryForInt(countSql,params);
+		long _2 = System.currentTimeMillis();
+		log.debug("COUNT("+(_2-_1)+"ms)-->"+ countSql);
+		return records;
+	}
+	/**
+	 * 查询总记录数
+	 * @param jdt    外部数据源
+	 * @param sql    查询SQL
+	 * @param limit  0=不限制查询数量
+	 * @return
+	 */
 	
 	/**
 	 * 获取分页数据
@@ -347,6 +444,15 @@ public abstract class BaseDaoImpl implements ExpandBaseDao, BeanSelfAware,
 		String paginationSQL = PagingSqlBuilder.getPagingSql(sql, pagingParameter);
 		long _1 = System.currentTimeMillis();
 		List list = jdt.queryForList(paginationSQL);
+		long _2 = System.currentTimeMillis();
+		log.debug("PAGE("+(_2-_1)+"ms)-->"+ paginationSQL);
+		return list;
+	}
+	public List getRecordData(String sql,Object[] array, PagingParameter pagingParameter,
+							  JdbcTemplate jdt){
+		String paginationSQL = PagingSqlBuilder.getPagingSql(sql, pagingParameter);
+		long _1 = System.currentTimeMillis();
+		List list = jdt.queryForList(paginationSQL,array);
 		long _2 = System.currentTimeMillis();
 		log.debug("PAGE("+(_2-_1)+"ms)-->"+ paginationSQL);
 		return list;
@@ -376,6 +482,10 @@ public abstract class BaseDaoImpl implements ExpandBaseDao, BeanSelfAware,
 	public List getRecordData(String sql, PagingParameter pagingParameter){
 		
 		return getRecordData(sql, pagingParameter, jdbcTemplate);
+	}
+	public List getRecordData(String sql, Object[] array,PagingParameter pagingParameter){
+
+		return getRecordData(sql, array,pagingParameter, jdbcTemplate);
 	}
 	
 	/**
@@ -437,6 +547,15 @@ public abstract class BaseDaoImpl implements ExpandBaseDao, BeanSelfAware,
 		log.debug("PAGE("+(_2-_1)+"ms)-->"+ paginationSQL);
 		return list;
 	}
+	public <T> List<T> getRecordData(String sql,Object array, PagingParameter pagingParameter,
+									 Class<T> classz, JdbcTemplate jdbcTemplate){
+		String paginationSQL = PagingSqlBuilder.getPagingSql(sql, pagingParameter);
+		long _1 = System.currentTimeMillis();
+		List<T> list =  queryForList(jdbcTemplate,paginationSQL,classz,array);
+		long _2 = System.currentTimeMillis();
+		log.debug("PAGE("+(_2-_1)+"ms)-->"+ paginationSQL);
+		return list;
+	}
 
 	/**
 	 * 分页,查询总记录限制为10000
@@ -449,6 +568,11 @@ public abstract class BaseDaoImpl implements ExpandBaseDao, BeanSelfAware,
 			int pageSize) {
 		
 		return getDatas(sql, curPage, pageSize, 10000, jdbcTemplate);
+	}
+	public Map<String, Object> findPageForMap(String sql, Object[] array,int curPage,
+											  int pageSize) {
+
+		return getDatas(sql,array, curPage, pageSize, 10000, jdbcTemplate);
 	}
 
 	/**
@@ -464,6 +588,42 @@ public abstract class BaseDaoImpl implements ExpandBaseDao, BeanSelfAware,
 		
 		return getDatas(sql, curPage, pageSize, classz, 2000, jdbcTemplate);
 	}
+	public Map<String, Object> findPageForMap(String sql, Object[] array,int curPage,
+											  int pageSize, Class<?> classz) {
+
+		return getDatas(sql, array, curPage, pageSize, classz, 2000, jdbcTemplate);
+	}
+
+	/**
+	 * 分页,查询总记录限制为2000
+	 * 对象封装
+	 * @param sql 查询SQL
+	 * @param search_text 模糊查询字段
+	 * @param curPage 当前页
+	 * @param pageSize 页大小
+	 * @return
+	 */
+
+	/**
+	 *
+	 * @param sql
+	 * @param search_text
+	 * @param curPage
+	 * @param pageSize
+	 * @param queryCount
+	 * @param jd
+	 * @return
+	 */
+
+
+	/**
+	 * 获取分页数据
+	 * @param sql
+	 * @param pagingParameter
+	 * @param jdbcTemplate
+	 * @return
+	 */
+
 	
 	/**
 	 * 分页,查询总记录数限制为10000
@@ -488,6 +648,11 @@ public abstract class BaseDaoImpl implements ExpandBaseDao, BeanSelfAware,
 	public Map<String, Object> findPageForMapNoLimit(String sql, int curPage,
 			int pageSize) {
 		
+		return getDatas(sql, curPage, pageSize, 0, jdbcTemplate);
+	}
+	public Map<String, Object> findPageForMapNoLimit(String sql, Object[] array,int curPage,
+													 int pageSize) {
+
 		return getDatas(sql, curPage, pageSize, 0, jdbcTemplate);
 	}
 
@@ -542,11 +707,23 @@ public abstract class BaseDaoImpl implements ExpandBaseDao, BeanSelfAware,
 			List<?> list = getRecordData(sql, pagingParameter, clazz, jd);
 	return new DataStore(totalRows,list).getEntity();}
 
+	public Map<String, Object> findPageForMapByJdbc(String sql, Object[] array,int curPage,
+													int pageSize, Class<?> clazz,JdbcTemplate jd) {
+		int totalRows = 10000;
+		PagingParameter pagingParameter = new PagingParameter(curPage,pageSize,totalRows);
+		List<?> list = getRecordData(sql, array,pagingParameter, clazz, jd);
+		return new DataStore(totalRows,list).getEntity();}
+
 	
 	public Map<String, Object> queryForMap(String sql, int curPage,
 			int pageSize, Class<?> classz, int queryCount) {
 		
 		return getDatas(sql, curPage, pageSize, classz, queryCount, jdbcTemplate);
+	}
+	public Map<String, Object> queryForMap(String sql,Object[] array, int curPage,
+										   int pageSize, Class<?> classz, int queryCount) {
+
+		return getDatas(sql, array,curPage, pageSize, classz, queryCount, jdbcTemplate);
 	}
 
 	public Map<String, Object> queryPageLimitTotal(String sql, int curPage,
@@ -555,6 +732,15 @@ public abstract class BaseDaoImpl implements ExpandBaseDao, BeanSelfAware,
 		
 		return getDatas(sql, curPage, pageSize, queryCount, jdbcTemplate);
 	}
+	public Map<String, Object> queryPageLimitTotal(String sql, Object[] array,int curPage,
+												   int pageSize, int queryCount, JdbcTemplate jTemplate,
+												   String orderStr) {
+
+		return getDatas(sql, curPage, pageSize, queryCount, jdbcTemplate);
+	}
+
+
+
 	
 	public Date getDbNowDate() {
 		String sql = "select sysdate from dual";
@@ -655,11 +841,23 @@ public abstract class BaseDaoImpl implements ExpandBaseDao, BeanSelfAware,
 		
 		return getDatas(sql, curPage, pageSize, classz, 0, jdbcTemplate);
 	}
+	public Map<String, Object> findPageForMapNoLimitByJdbc(String sql,Object[] array, int curPage,
+														   int pageSize, Class<?> classz,JdbcTemplate jd) {
+
+		return getDatas(sql, curPage, pageSize, classz, 0, jdbcTemplate);
+	}
 	
 	private Map<String, Object> getDatas(String sql, int curPage, int pageSize, Class<?> classz, int queryCount, JdbcTemplate jd){
 		int totalRows = getRecordCounts(sql, jd, queryCount);
 		PagingParameter pagingParameter = new PagingParameter(curPage,pageSize,totalRows);
 		List<?> list = getRecordData(sql, pagingParameter, classz, jd);
+		return new DataStore(totalRows,list).getEntity();
+	}
+	private Map<String, Object> getDatas(String sql, Object array,int curPage, int pageSize,
+										 Class<?> classz, int queryCount, JdbcTemplate jd){
+		int totalRows = getRecordCounts(sql, jd, queryCount);
+		PagingParameter pagingParameter = new PagingParameter(curPage,pageSize,totalRows);
+		List<?> list = getRecordData(sql, array,pagingParameter, classz, jd);
 		return new DataStore(totalRows,list).getEntity();
 	}
 	
@@ -668,6 +866,13 @@ public abstract class BaseDaoImpl implements ExpandBaseDao, BeanSelfAware,
 		int totalRows = getRecordCounts(sql, jd, queryCount);
 		PagingParameter pagingParameter = new PagingParameter(curPage,pageSize,totalRows);
 		List list = getRecordData(sql, pagingParameter, jd);
+		return new DataStore(totalRows,list).getEntity();
+	}
+	private Map<String, Object> getDatas(String sql, Object[] array,int curPage, int pageSize,
+										 int queryCount,JdbcTemplate jd){
+		int totalRows = getRecordCounts(sql, jd, queryCount,array);
+		PagingParameter pagingParameter = new PagingParameter(curPage,pageSize,totalRows);
+		List list = getRecordData(sql,array, pagingParameter, jd);
 		return new DataStore(totalRows,list).getEntity();
 	}
 	

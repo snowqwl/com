@@ -1,12 +1,9 @@
 package com.sunshine.monitor.system.redlist.dao.jdbc;
 
 import java.io.Serializable;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.security.Key;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import javax.annotation.Resource;
 
@@ -79,39 +76,77 @@ public class RedListDaoImpl extends BaseDaoImpl implements RedListDao {
 	}
 
 	public int addRedList(RedList redlist) throws Exception {
+		List param = new ArrayList<>();
 		String id = this.jdbcTemplate.queryForObject("select SEQ_JM_RED_NAMELIST.NEXTVAL from dual", String.class);
-		String sql = "insert into jm_red_namelist(id,hphm, hpzl, clxh, clpp, cllx, hpys, csys, clsyr, syrlxdh, syrxxdz,kssj, jssj, status, isvalid) values ('"
-				+id
-				+"','"
-				+ redlist.getHphm()
-				+ "','"
-				+ ((redlist.getHpzl() == null) ? "" : redlist.getHpzl())
-				+ "','"
-				+ ((redlist.getClxh() == null) ? "" : redlist.getClxh())
-				+ "','"
-				+ ((redlist.getClpp() == null) ? "" : redlist.getClpp())
-				+ "','"
-				+ ((redlist.getCllx() == null) ? "" : redlist.getCllx())
-				+ "','"
-				+ ((redlist.getHpys() == null) ? "" : redlist.getHpys())
-				+ "','"
-				+ ((redlist.getCsys() == null) ? "" : redlist.getCsys())
-				+ "','"
-				+ ((redlist.getClsyr() == null) ? "" : redlist.getClsyr())
-				+ "','"
-				+ ((redlist.getSyrlxdh() == null) ? "" : redlist.getSyrlxdh())
-				+ "','"
-				+ ((redlist.getSyrxxdz() == null) ? "" : redlist.getSyrxxdz())
-				+ "',sysdate,add_months(sysdate,12),'"
-				+ redlist.getStatus()
-				+ "'," + "'1')";
+		String sql = "insert into jm_red_namelist(id,hphm, hpzl, clxh, clpp, cllx, hpys, csys, " +
+				"clsyr, syrlxdh, syrxxdz,kssj, jssj, status, isvalid) values (?,?,?,?,?,?,?,?,?,?,?,sysdate,add_months(sysdate,12),?," + "'1')";
+		param.add(id);
+		param.add(redlist.getHphm());
+		if(redlist.getHpzl() == null){
+			param.add("''");
+		}else{
+			param.add(redlist.getHpzl());
+		}
+
+		if(redlist.getClxh() == null){
+			param.add("''");
+		}else{
+			param.add(redlist.getClxh());
+		}
+
+		if(redlist.getClpp() == null){
+			param.add("''");
+		}else{
+			param.add(redlist.getClpp());
+		}
+
+		if(redlist.getCllx() == null){
+			param.add("''");
+		}else{
+			param.add(redlist.getCllx());
+		}
+
+		if(redlist.getHpys() == null){
+			param.add("''");
+		}else{
+			param.add(redlist.getHpys());
+		}
+		if(redlist.getCsys() == null){
+			param.add("''");
+		}else{
+			param.add(redlist.getCsys());
+		}
+
+		if(redlist.getClsyr() == null){
+			param.add("''");
+		}else{
+			param.add(redlist.getClsyr());
+		}
+
+		if(redlist.getSyrlxdh() == null){
+			param.add("''");
+		}else{
+			param.add(redlist.getSyrlxdh());
+		}
+
+
+		if(redlist.getSyrxxdz() == null){
+			param.add("''");
+		}else{
+			param.add(redlist.getSyrxxdz());
+		}
+
+		param.add(redlist.getStatus());
+
+
 		//addDatatoCache(redlist.getHphm());
-		return this.jdbcTemplate.update(sql);
+		return this.jdbcTemplate.update(sql,param.toArray());
 	}
 	
 	public int updateinValidRedList(RedList redlist) throws Exception {
-		String sql = "update jm_red_namelist set status='0', isvalid='1', auditman='', auditdept='', auditdate='' where id = '" + redlist.getId()+ "'";
-		return this.jdbcTemplate.update(sql) ;
+		String sql = "update jm_red_namelist set status='0', isvalid='1', auditman='', " +
+				"auditdept='', auditdate='' where id = ?";
+		return this.jdbcTemplate.update(sql,redlist.getId()) ;
 	}
 
 	public RedList queryRedList(String subSql) throws Exception {
@@ -129,6 +164,7 @@ public class RedListDaoImpl extends BaseDaoImpl implements RedListDao {
 
 	public Map<String, Object> queryRedList(Map<String, Object> conditions)
 			throws Exception {
+		List param = new ArrayList<>();
 		StringBuffer sql = new StringBuffer(20);
 		sql.append("select * from jm_red_namelist where 1=1 ");
 		Set<Entry<String, Object>> set = conditions.entrySet();
@@ -144,50 +180,53 @@ public class RedListDaoImpl extends BaseDaoImpl implements RedListDao {
 			if (!isFilter) {
 				if (key.equals("kssj")) {
 					sql.append(" and kssj >= ").append(
-							"to_date('" + value + "','yyyy-mm-dd hh24:mi:ss')");
+							"to_date(?,'yyyy-mm-dd hh24:mi:ss')");
+					param.add(value);
 				} else if (key.equals("jssj")) {
 					sql.append(" and kssj <= ").append(
-							"to_date('" + value + "','yyyy-mm-dd hh24:mi:ss')");
+							"to_date(?,'yyyy-mm-dd hh24:mi:ss')");
+					param.add(value);
 				} else {
-					sql.append(" and ");
-					sql.append(key);
-					sql.append(" = '").append(value).append("'");
+					sql.append(" and ?=?");
+					param.add(key);
+					param.add(value);
 				}
 			}
 		}
-		sql.append(" order by ");
-		sql.append(conditions.get("sort"));
-		sql.append(" ");
-		sql.append(conditions.get("order"));
-		Map<String, Object> map = findPageForMap(sql.toString(), Integer
+		sql.append(" order by ? ?");
+		param.add(conditions.get("sort"));
+		param.add(conditions.get("order"));
+		Map<String, Object> map = findPageForMap(sql.toString(), param.toArray(),Integer
 				.parseInt(conditions.get("page").toString()), Integer
 				.parseInt(conditions.get("rows").toString()));
 		return map;
 	}
 
 	public int updateRedList(RedList redlist) throws Exception {
-		String sql = "update jm_red_namelist set status='"
-				+ redlist.getStatus() + "', isvalid='" + redlist.getIsvalid()+"', auditman='" + redlist.getAuditman()
-				+ "',auditdept='" + redlist.getAuditdept()
-				+ "',auditdate=sysdate where id='" + redlist.getId() + "'";
-		
-		
+		List param = new ArrayList<>();
+		String sql = "update jm_red_namelist set status=?, isvalid=?, " +
+				"auditman=?,auditdept=?,auditdate=sysdate where id=?";
+		param.add(redlist.getStatus());
+		param.add(redlist.getIsvalid());
+		param.add(redlist.getAuditman());
+		param.add(redlist.getAuditdept());
+		param.add(redlist.getId());
+
+
 		if(redlist.getStatus().equalsIgnoreCase("1")&&redlist.getIsvalid().equalsIgnoreCase("1")){
 			addDatatoCache(redlist.getHphm());
 		}
-		return this.jdbcTemplate.update(sql);
+		return this.jdbcTemplate.update(sql, param.toArray());
 	}
 
 	public int deblockingRedList(RedList redlist) throws Exception {
-		String sql = "update jm_red_namelist set status='0' where id='"
-				+ redlist.getId() + "'";
-		return this.jdbcTemplate.update(sql);
+		String sql = "update jm_red_namelist set status='0' where id=?";
+		return this.jdbcTemplate.update(sql,redlist.getId());
 	}
 
 	public int deleteRedList(String id) throws Exception {
-		String sql = "update jm_red_namelist set isvalid = '0' ,status = '0' where id='"
-				+ id + "'";
-		return this.jdbcTemplate.update(sql);
+		String sql = "update jm_red_namelist set isvalid = '0' ,status = '0' where id=?";
+		return this.jdbcTemplate.update(sql,id);
 	}
 
 	public String getTime() throws Exception {
@@ -197,6 +236,7 @@ public class RedListDaoImpl extends BaseDaoImpl implements RedListDao {
 
 	public Map<String, Object> queryValidRedlist(Map<String, Object> conditions)
 			throws Exception {
+		List param = new ArrayList<>();
 		StringBuffer sql = new StringBuffer(20);
 		sql.append("select * from jm_red_namelist where 1=1  ");
 		Set<Entry<String, Object>> set = conditions.entrySet();
@@ -212,22 +252,24 @@ public class RedListDaoImpl extends BaseDaoImpl implements RedListDao {
 			if (!isFilter) {
 				if (key.equals("kssj")) {
 					sql.append(" and kssj >= ").append(
-							"to_date('" + value + "','yyyy-mm-dd hh24:mi:ss')");
+							"to_date(?,'yyyy-mm-dd hh24:mi:ss')");
+					param.add(value);
 				} else if (key.equals("jssj")) {
 					sql.append(" and kssj <= ").append(
-							"to_date('" + value + "','yyyy-mm-dd hh24:mi:ss')");
+							"to_date(?,'yyyy-mm-dd hh24:mi:ss')");
+					param.add(value);
 				} else {
-					sql.append(" and ");
-					sql.append(key);
-					sql.append(" = '").append(value).append("'");
+					sql.append(" and ?=?");
+					param.add(key);
+					param.add(value);
 				}
 			}
 		}
-		sql.append(" order by ");
-		sql.append(conditions.get("sort"));
-		sql.append(" ");
-		sql.append(conditions.get("order"));
-		Map<String, Object> map = findPageForMap(sql.toString(), Integer
+		sql.append(" order by ? ?");
+		param.add(conditions.get("sort"));
+		param.add(conditions.get("order"));
+
+		Map<String, Object> map = findPageForMap(sql.toString(), param.toArray(),Integer
 				.parseInt(conditions.get("page").toString()), Integer
 				.parseInt(conditions.get("rows").toString()));
 		return map;

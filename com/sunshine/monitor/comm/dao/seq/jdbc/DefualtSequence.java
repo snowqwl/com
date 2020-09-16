@@ -20,7 +20,8 @@ public class DefualtSequence implements Sequence{
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
 	public String nextVal(String seqName){
-		return jdbcTemplate.queryForObject("select CSZ||to_char("+seqName+".NEXTVAL,'FM0999999999') from frm_syspara where GJZ='xzqh'",String.class);
+		return jdbcTemplate.queryForObject("select CSZ||to_char(?.NEXTVAL," +
+				"'FM0999999999') from frm_syspara where GJZ='xzqh'",String.class,seqName);
 	}
 	
 	public String nextValByTable(String tableName){

@@ -68,8 +68,14 @@ public interface BaseDao {
 	 * @return
 	 */
 	public Map<String, Object> findPageForMap(String sql, int curPage, int pageSize);
+
+	public Map<String, Object> findPageForMap(String sql,Object[] array, int curPage, int pageSize);
+
 	
 	public Map<String, Object> findPageForMap(String sql, int curPage, int pageSize,Class<?> clazz);
+
+	public Map<String, Object> findPageForMap(String sql,Object[] array, int curPage, int pageSize,
+											  Class<?> clazz);
 	
 	public Map<String, Object> findPageForMapObj(String sql, int curPage, int pageSize);
 	
@@ -83,6 +89,7 @@ public interface BaseDao {
 	 */
 	public Map<String, Object> findPageForMapNoLimit(String sql, int curPage,
 			int pageSize, Class<?> clazz);
+
 	
 	
 	/**
@@ -90,11 +97,12 @@ public interface BaseDao {
 	 * @param sql
 	 * @param curPage
 	 * @param pageSize
-	 * @param clazz
 	 * @return
 	 */
 	public Map<String, Object> findPageForMapNoLimit(String sql, int curPage,
 			int pageSize);
+	public Map<String, Object> findPageForMapNoLimit(String sql, Object[] array,int curPage,
+													 int pageSize);
 	
 	/**
 	 * Query limit Map
@@ -141,7 +149,12 @@ public interface BaseDao {
 	 * @return
 	 */
 	public Map<String, Object> queryPageLimitTotal(String sql, int curPage, int pageSize, int queryCount, JdbcTemplate jTemplate,String orderStr);
-	
+	public Map<String, Object> queryPageLimitTotal(String sql,Object[] array, int curPage,
+												   int pageSize,
+												   int queryCount, JdbcTemplate jTemplate,String orderStr);
+
+
+
 	/**
 	 * 获取数据库当前时间
 	 * @return
@@ -157,7 +170,6 @@ public interface BaseDao {
 	/**
 	 * 
 	 * @param <T>
-	 * @param jTemplate
 	 * @param map
 	 * @param classz
 	 * @return
@@ -197,6 +209,9 @@ public interface BaseDao {
 	 */
 	public Map<String, Object> findPageForMapByJdbc(String sql, int curPage,
 			int pageSize, Class<?> clazz,JdbcTemplate jd);
+
+	public Map<String, Object> findPageForMapByJdbc(String sql, Object[] array,int curPage,
+													int pageSize, Class<?> clazz,JdbcTemplate jd);
 	
 	/**
 	 * 删除

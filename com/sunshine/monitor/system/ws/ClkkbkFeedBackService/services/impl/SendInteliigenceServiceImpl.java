@@ -84,8 +84,9 @@ public class SendInteliigenceServiceImpl implements SendInteliigenceService {
 
 	private void updateTransIntellivece(TransIntelligence bean, String jg) {
 		int csbj = bean.getCsbj().intValue() + 1;
-	    String sql = "update trans_intelligence set cszt='" + jg + "', csbj=" + csbj + ", cssj=sysdate where csxh='" + bean.getCsxh() + "'";
-	    int res = jdbcTemplate.update(sql);
+	    String sql = "update trans_intelligence set cszt=?, csbj=?, cssj=sysdate where" +
+				" csxh=?";
+	    int res = jdbcTemplate.update(sql,new Object[]{jg,csbj,bean.getCsxh()});
 	    if(res != 1) log.error("大情报相关数据发送完成时，更新传输表异常，传输序号为："+ bean.getCsxh());
 	    else log.info("大情报相关数据发送完成，更新传输表成功，传输序号为："+ bean.getCsxh());
 	}
